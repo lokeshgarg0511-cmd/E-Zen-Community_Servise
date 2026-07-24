@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html { scroll-behavior: smooth; }
+
+body {
+  @apply bg-slate-50 text-slate-800 font-body antialiased dark:bg-navy-950 dark:text-slate-100;
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.35); border-radius: 999px; }
+.dark ::-webkit-scrollbar-thumb { background: rgba(34,211,238,0.25); }
+
+:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+.card-surface {
+  @apply bg-white border border-slate-200 shadow-card rounded-2xl dark:bg-navy-800 dark:border-white/5;
+}
+
+.input-field {
+  @apply w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-800
+    placeholder:text-slate-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none
+    transition dark:bg-navy-700 dark:border-white/10 dark:text-slate-100 dark:placeholder:text-slate-500;
+}
+
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm
+    bg-cyan-500 text-navy-950 hover:bg-cyan-400 active:scale-[0.98] transition shadow-glow disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm
+    border border-slate-300 text-slate-700 hover:bg-slate-100 active:scale-[0.98] transition
+    dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/5;
+}
+
+.badge {
+  @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold;
+}
