@@ -49,6 +49,26 @@ const saveDB = (db) => localStorage.setItem(STORE_KEY, JSON.stringify(db));
 const delay = (ms = 350) => new Promise((res) => setTimeout(res, ms));
 const uid = (prefix) => `${prefix}_${Math.random().toString(36).slice(2, 9)}`;
 
+const portalFor = (student) => {
+  const prefix = student?.department === "ECE" ? "EC" : student?.department === "MECH" ? "ME" : "CS";
+  return {
+    courses: [
+      { code: `${prefix}301`, name: "Data Structures & Algorithms", instructor: "Dr. Meera Krishnan", credits: 4, color: "cyan" },
+      { code: `${prefix}302`, name: "Database Management Systems", instructor: "Prof. Ravi Menon", credits: 4, color: "violet" },
+      { code: `${prefix}303`, name: "Operating Systems", instructor: "Dr. Ananya Shah", credits: 3, color: "amber" },
+      { code: `${prefix}304`, name: "Computer Networks", instructor: "Prof. Karthik Rao", credits: 3, color: "rose" },
+    ],
+    timetable: {
+      Monday: ["09:00–10:00 • Data Structures", "11:00–12:00 • DBMS", "14:00–15:00 • Operating Systems"],
+      Tuesday: ["10:00–11:00 • Computer Networks", "12:00–13:00 • DBMS Lab", "15:00–16:00 • Data Structures"],
+      Wednesday: ["09:00–10:00 • Operating Systems", "11:00–12:00 • Data Structures", "14:00–16:00 • OS Lab"],
+      Thursday: ["10:00–11:00 • DBMS", "12:00–13:00 • Computer Networks", "15:00–16:00 • Tutorial"],
+      Friday: ["09:00–10:00 • Data Structures", "11:00–13:00 • Networks Lab", "14:00–15:00 • DBMS"],
+    },
+    mentor: { name: "Dr. Meera Krishnan", title: "Faculty Mentor", email: "meera.krishnan@university.edu" },
+  };
+};
+
 // ---------------------------------------------------------------------------
 // Composite score formula - identical to backend/utils/calculateWarning.js
 // ---------------------------------------------------------------------------
@@ -228,6 +248,32 @@ export const studentApi = {
       trend: db.warningHistory[studentId] || [],
       notifications: db.notifications.filter((n) => n.recipientId === studentId),
     };
+  },
+  async getPortal(studentId) {
+    await delay(180);
+    const student = loadDB().students.find((s) => s.id === studentId);
+    return portalFor(student);
+  },
+  async submitAssignment(assignmentId, studentId, fileName) {
+    await delay(350);
+    const db = loadDB();
+    const assignment = db.assignments.find((a) => a.id === assignmentId);
+    const submission = assignment?.submissions.find((s) => s.studentId === studentId);
+    if (!submission) return { success: false, message: "Assignment not found" };
+    submission.status = "submitted";
+    submission.fileName = fileName;
+    submission.submittedAt = new Date().toISOString();
+    saveDB(db);
+    return { success: true };
+  },
+  async updateProfile(studentId, payload) {
+    await delay(250);
+    const db = loadDB();
+    const student = db.students.find((s) => s.id === studentId);
+    if (!student) return { success: false };
+    Object.assign(student, payload);
+    saveDB(db);
+    return { success: true, student };
   },
   async listAll(filters = {}) {
     await delay();

@@ -18,6 +18,10 @@ import StudentMarks from "./pages/student/StudentMarks";
 import StudentAssignments from "./pages/student/StudentAssignments";
 import StudentNotifications from "./pages/student/StudentNotifications";
 import StudentSettings from "./pages/student/StudentSettings";
+import StudentCourses from "./pages/student/StudentCourses";
+import StudentSyllabus from "./pages/student/StudentSyllabus";
+import StudentTimetable from "./pages/student/StudentTimetable";
+import StudentMentorMeetings from "./pages/student/StudentMentorMeetings";
 
 import FacultyDashboard from "./pages/faculty/FacultyDashboard";
 import FacultyStudents from "./pages/faculty/FacultyStudents";
@@ -62,6 +66,10 @@ function App() {
         <Route path="/student/assignments" element={<ProtectedRoute role="student"><StudentAssignments /></ProtectedRoute>} />
         <Route path="/student/notifications" element={<ProtectedRoute role="student"><StudentNotifications /></ProtectedRoute>} />
         <Route path="/student/settings" element={<ProtectedRoute role="student"><StudentSettings /></ProtectedRoute>} />
+        <Route path="/student/courses" element={<ProtectedRoute role="student"><StudentCourses /></ProtectedRoute>} />
+        <Route path="/student/syllabus" element={<ProtectedRoute role="student"><StudentSyllabus /></ProtectedRoute>} />
+        <Route path="/student/timetable" element={<ProtectedRoute role="student"><StudentTimetable /></ProtectedRoute>} />
+        <Route path="/student/mentor-meetings" element={<ProtectedRoute role="student"><StudentMentorMeetings /></ProtectedRoute>} />
 
         {/* Faculty */}
         <Route path="/faculty" element={<ProtectedRoute role="faculty"><FacultyDashboard /></ProtectedRoute>} />

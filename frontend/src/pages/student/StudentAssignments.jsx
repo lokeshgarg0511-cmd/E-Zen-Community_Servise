@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
 import Badge from "../../components/Badge";
 import { useAuth } from "../../context/AuthContext";
@@ -7,10 +7,28 @@ import { studentApi } from "../../services/mockApi";
 const StudentAssignments = () => {
   const { user } = useAuth();
   const [data, setData] = useState(null);
+  const [uploading, setUploading] = useState(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     studentApi.getDashboard(user.id).then(setData);
   }, [user.id]);
+
+  const chooseFile = (assignmentId) => {
+    inputRef.current.dataset.assignmentId = assignmentId;
+    inputRef.current.click();
+  };
+
+  const upload = async (event) => {
+    const file = event.target.files?.[0];
+    const assignmentId = event.target.dataset.assignmentId;
+    if (!file || !assignmentId) return;
+    setUploading(assignmentId);
+    await studentApi.submitAssignment(assignmentId, user.id, file.name);
+    setData(await studentApi.getDashboard(user.id));
+    setUploading(null);
+    event.target.value = "";
+  };
 
   return (
     <DashboardLayout role="student">
@@ -18,6 +36,7 @@ const StudentAssignments = () => {
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Submission timeliness contributes 30% to your composite score.</p>
 
       <div className="space-y-3">
+        <input ref={inputRef} onChange={upload} type="file" accept=".pdf,.doc,.docx,.zip" className="hidden" />
         {data?.assignments.map((a) => (
           <div key={a.id} className="card-surface p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="min-w-0">
@@ -25,7 +44,14 @@ const StudentAssignments = () => {
               <p className="text-xs text-slate-400 mt-0.5">{a.course} &middot; due {new Date(a.dueDate).toLocaleDateString()}</p>
               {a.description && <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5">{a.description}</p>}
             </div>
-            <Badge status={a.status} />
+            <div className="flex items-center gap-3">
+              <Badge status={a.status} />
+              {a.status !== "submitted" && (
+                <button onClick={() => chooseFile(a.id)} disabled={uploading === a.id} className="btn-primary text-xs py-2">
+                  {uploading === a.id ? "Uploading…" : "Upload"}
+                </button>
+              )}
+            </div>
           </div>
         ))}
         {data && data.assignments.length === 0 && (
