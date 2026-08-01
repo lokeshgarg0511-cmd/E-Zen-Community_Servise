@@ -25,6 +25,8 @@ const seedDB = () => ({
   warningHistory: WARNING_HISTORY,
   departments: DEPARTMENTS,
   courses: COURSES,
+  assessments: [],
+  selfReports: [],
   pendingOtps: {},
 });
 
@@ -36,7 +38,10 @@ const loadDB = () => {
       localStorage.setItem(STORE_KEY, JSON.stringify(fresh));
       return fresh;
     }
-    return JSON.parse(raw);
+    const db = JSON.parse(raw);
+    db.assessments ||= [];
+    db.selfReports ||= [];
+    return db;
   } catch {
     const fresh = seedDB();
     localStorage.setItem(STORE_KEY, JSON.stringify(fresh));
@@ -306,17 +311,17 @@ export const facultyApi = {
       atRiskStudents: db.students.filter((s) => s.composite.riskLevel === "at-risk").length,
     };
   },
-  async markAttendance(studentId, course, status) {
+  async markAttendance(studentId, course, status, details = {}) {
     await delay(200);
     const db = loadDB();
-    db.attendance.push({ id: uid("att"), studentId, course, date: new Date().toISOString(), status });
+    db.attendance.push({ id: uid("att"), studentId, course, date: details.date || new Date().toISOString(), status, ...details });
     saveDB(db);
     return { success: true };
   },
-  async uploadMarks(studentId, course, examType, marksObtained, totalMarks) {
+  async uploadMarks(studentId, course, examType, marksObtained, totalMarks, details = {}) {
     await delay(200);
     const db = loadDB();
-    db.marks.push({ id: uid("mk"), studentId, course, examType, marksObtained: Number(marksObtained), totalMarks: Number(totalMarks) });
+    db.marks.push({ id: uid("mk"), studentId, course, examType, marksObtained: Number(marksObtained), totalMarks: Number(totalMarks), ...details });
     saveDB(db);
     return { success: true };
   },
@@ -345,6 +350,41 @@ export const facultyApi = {
     await delay();
     const db = loadDB();
     return db.assignments;
+  },
+  async createAssessment(payload) {
+    await delay(250);
+    const db = loadDB();
+    db.assessments.push({ id: uid("asm"), createdAt: new Date().toISOString(), ...payload });
+    saveDB(db);
+    return { success: true };
+  },
+  async listAssessments() {
+    await delay(150);
+    return loadDB().assessments;
+  },
+  async createSelfReport(payload) {
+    await delay(250);
+    const db = loadDB();
+    db.selfReports.unshift({ id: uid("rpt"), createdAt: new Date().toISOString(), ...payload });
+    saveDB(db);
+    return { success: true };
+  },
+  async listSelfReports(facultyId) {
+    await delay(150);
+    return loadDB().selfReports.filter((report) => report.facultyId === facultyId);
+  },
+  async getProfile(facultyId) {
+    await delay(150);
+    return loadDB().faculty.find((faculty) => faculty.id === facultyId);
+  },
+  async updateProfile(facultyId, payload) {
+    await delay(200);
+    const db = loadDB();
+    const faculty = db.faculty.find((item) => item.id === facultyId);
+    if (!faculty) return { success: false };
+    Object.assign(faculty, payload);
+    saveDB(db);
+    return { success: true, faculty };
   },
 };
 

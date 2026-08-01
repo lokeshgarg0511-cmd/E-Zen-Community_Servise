@@ -30,6 +30,7 @@ import FacultyMarks from "./pages/faculty/FacultyMarks";
 import FacultyAssignments from "./pages/faculty/FacultyAssignments";
 import FacultyReports from "./pages/faculty/FacultyReports";
 import FacultySettings from "./pages/faculty/FacultySettings";
+import FacultyAssessment from "./pages/faculty/FacultyAssessment";
 
 import ParentDashboard from "./pages/parent/ParentDashboard";
 import ParentAttendance from "./pages/parent/ParentAttendance";
@@ -77,6 +78,7 @@ function App() {
         <Route path="/faculty/attendance" element={<ProtectedRoute role="faculty"><FacultyAttendance /></ProtectedRoute>} />
         <Route path="/faculty/marks" element={<ProtectedRoute role="faculty"><FacultyMarks /></ProtectedRoute>} />
         <Route path="/faculty/assignments" element={<ProtectedRoute role="faculty"><FacultyAssignments /></ProtectedRoute>} />
+        <Route path="/faculty/assessments" element={<ProtectedRoute role="faculty"><FacultyAssessment /></ProtectedRoute>} />
         <Route path="/faculty/reports" element={<ProtectedRoute role="faculty"><FacultyReports /></ProtectedRoute>} />
         <Route path="/faculty/settings" element={<ProtectedRoute role="faculty"><FacultySettings /></ProtectedRoute>} />
 

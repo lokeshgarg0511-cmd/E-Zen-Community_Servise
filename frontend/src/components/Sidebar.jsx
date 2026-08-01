@@ -3,7 +3,7 @@ import { NavLink } from "react-router-dom";
 import {
   MdSpaceDashboard, MdEventAvailable, MdOutlineAssignment, MdGrade,
   MdNotificationsNone, MdOutlineAnalytics, MdPeopleAlt, MdSchool,
-  MdBusiness, MdMenuBook, MdSettings, MdClose, MdSchedule, MdEvent, MdGroups,
+  MdBusiness, MdMenuBook, MdSettings, MdClose, MdSchedule, MdGroups, MdFactCheck,
 } from "react-icons/md";
 
 const NAV = {
@@ -25,6 +25,7 @@ const NAV = {
     { to: "/faculty/attendance", label: "Attendance", icon: MdEventAvailable },
     { to: "/faculty/marks", label: "Marks", icon: MdGrade },
     { to: "/faculty/assignments", label: "Assignments", icon: MdOutlineAssignment },
+    { to: "/faculty/assessments", label: "Assessments", icon: MdFactCheck },
     { to: "/faculty/reports", label: "Reports", icon: MdOutlineAnalytics },
     { to: "/faculty/settings", label: "Settings", icon: MdSettings },
   ],

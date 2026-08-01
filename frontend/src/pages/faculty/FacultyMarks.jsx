@@ -5,70 +5,13 @@ import { COURSES } from "../../services/seedData";
 
 const FacultyMarks = () => {
   const [students, setStudents] = useState([]);
-  const [form, setForm] = useState({ studentId: "", course: COURSES[0].code, examType: "internal1", marksObtained: "", totalMarks: "50" });
+  const [form, setForm] = useState({ studentId: "", subject: COURSES[0].code, customSubject: "", className: "CSE-A", semester: "5", date: new Date().toISOString().slice(0, 10), time: "09:00", examType: "internal1", marksObtained: "", totalMarks: "50" });
   const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    studentApi.listAll().then(setStudents);
-  }, []);
-
-  const update = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
-
-  const submit = async (e) => {
-    e.preventDefault();
-    if (!form.studentId || !form.marksObtained) return;
-    await facultyApi.uploadMarks(form.studentId, form.course, form.examType, form.marksObtained, form.totalMarks);
-    setSaved(true);
-    setForm((f) => ({ ...f, marksObtained: "" }));
-    setTimeout(() => setSaved(false), 2000);
-  };
-
-  return (
-    <DashboardLayout role="faculty">
-      <h1 className="font-display text-2xl font-bold text-slate-900 dark:text-white mb-1">Upload marks</h1>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Marks feed directly into each student's composite early-warning score.</p>
-
-      <form onSubmit={submit} className="card-surface p-6 max-w-xl space-y-4">
-        <div>
-          <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5 block">Student</label>
-          <select value={form.studentId} onChange={update("studentId")} required className="input-field">
-            <option value="">Select student</option>
-            {students.map((s) => <option key={s.id} value={s.id}>{s.fullName} ({s.rollNumber})</option>)}
-          </select>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5 block">Course</label>
-            <select value={form.course} onChange={update("course")} className="input-field">
-              {COURSES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5 block">Exam type</label>
-            <select value={form.examType} onChange={update("examType")} className="input-field">
-              <option value="internal1">Internal 1</option>
-              <option value="internal2">Internal 2</option>
-              <option value="internal3">Internal 3</option>
-              <option value="assignment">Assignment</option>
-              <option value="quiz">Quiz</option>
-            </select>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5 block">Marks obtained</label>
-            <input type="number" required value={form.marksObtained} onChange={update("marksObtained")} className="input-field" />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5 block">Total marks</label>
-            <input type="number" required value={form.totalMarks} onChange={update("totalMarks")} className="input-field" />
-          </div>
-        </div>
-        {saved && <p className="text-sm text-cyan-500">Marks uploaded and composite score recalculated.</p>}
-        <button type="submit" className="btn-primary">Upload marks</button>
-      </form>
-    </DashboardLayout>
-  );
+  useEffect(() => { studentApi.listAll().then((list) => setStudents([...list].sort((a, b) => a.fullName.localeCompare(b.fullName)))); }, []);
+  const update = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
+  const subject = form.subject === "other" ? form.customSubject.trim() : form.subject;
+  const submit = async (event) => { event.preventDefault(); if (!form.studentId || !subject || !form.marksObtained) return; await facultyApi.uploadMarks(form.studentId, subject, form.examType, form.marksObtained, form.totalMarks, { className: form.className, semester: Number(form.semester), date: `${form.date}T${form.time}`, time: form.time }); setForm((current) => ({ ...current, marksObtained: "" })); setSaved(true); setTimeout(() => setSaved(false), 2500); };
+  return <DashboardLayout role="faculty"><h1 className="font-display text-2xl font-bold text-slate-900 dark:text-white mb-1">Upload marks</h1><p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Students are listed alphabetically; marks update the early-warning score.</p><form onSubmit={submit} className="card-surface p-6 max-w-3xl grid sm:grid-cols-2 gap-4"><Field label="Student (A–Z)"><select required value={form.studentId} onChange={update("studentId")} className="input-field"><option value="">Select student</option>{students.map((student) => <option key={student.id} value={student.id}>{student.fullName} ({student.rollNumber})</option>)}</select></Field><Field label="Subject"><select value={form.subject} onChange={update("subject")} className="input-field">{COURSES.map((course) => <option key={course.code} value={course.code}>{course.code}</option>)}<option value="other">Other / Type subject</option></select></Field>{form.subject === "other" && <Field label="Custom subject"><input required value={form.customSubject} onChange={update("customSubject")} className="input-field" /></Field>}<Field label="Class"><input required value={form.className} onChange={update("className")} className="input-field" /></Field><Field label="Semester"><input required type="number" min="1" max="8" value={form.semester} onChange={update("semester")} className="input-field" /></Field><Field label="Date"><input required type="date" value={form.date} onChange={update("date")} className="input-field" /></Field><Field label="Time"><input required type="time" value={form.time} onChange={update("time")} className="input-field" /></Field><Field label="Exam type"><select value={form.examType} onChange={update("examType")} className="input-field"><option value="internal1">Internal 1</option><option value="internal2">Internal 2</option><option value="quiz">Quiz</option><option value="assignment">Assignment</option></select></Field><Field label="Marks obtained"><input required type="number" min="0" value={form.marksObtained} onChange={update("marksObtained")} className="input-field" /></Field><Field label="Total marks"><input required type="number" min="1" value={form.totalMarks} onChange={update("totalMarks")} className="input-field" /></Field><div className="sm:col-span-2 flex gap-3 items-center"> <button className="btn-primary">Upload marks</button>{saved && <span className="text-sm text-cyan-500">Marks uploaded successfully.</span>}</div></form></DashboardLayout>;
 };
-
+const Field = ({ label, children }) => <div><label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5 block">{label}</label>{children}</div>;
 export default FacultyMarks;

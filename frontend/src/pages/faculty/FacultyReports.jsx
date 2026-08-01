@@ -1,47 +1,19 @@
 import React, { useEffect, useState } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
 import { ComparisonBarChart, RiskPieChart } from "../../components/Charts";
-import { studentApi } from "../../services/mockApi";
+import { studentApi, facultyApi } from "../../services/mockApi";
+import { useAuth } from "../../context/AuthContext";
+import { COURSES } from "../../services/seedData";
 
 const FacultyReports = () => {
-  const [students, setStudents] = useState([]);
-
-  useEffect(() => {
-    studentApi.listAll().then(setStudents);
-  }, []);
-
-  const byDept = Object.values(
-    students.reduce((acc, s) => {
-      acc[s.department] = acc[s.department] || { name: s.department, value: 0, count: 0 };
-      acc[s.department].value += s.composite.score;
-      acc[s.department].count += 1;
-      return acc;
-    }, {})
-  ).map((d) => ({ name: d.name, value: Math.round((d.value / d.count) * 100) / 100 }));
-
-  const riskCounts = ["excellent", "normal", "at-risk"].map((level) => ({
-    name: level === "at-risk" ? "At Risk" : level.charAt(0).toUpperCase() + level.slice(1),
-    value: students.filter((s) => s.composite.riskLevel === level).length,
-    color: level === "excellent" ? "#22d3ee" : level === "normal" ? "#fbbf24" : "#fb7185",
-  }));
-
-  return (
-    <DashboardLayout role="faculty">
-      <h1 className="font-display text-2xl font-bold text-slate-900 dark:text-white mb-1">Reports & analytics</h1>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Department performance and risk distribution across your cohort.</p>
-
-      <div className="grid lg:grid-cols-2 gap-5">
-        <div className="card-surface p-5">
-          <h2 className="font-display font-semibold text-slate-800 dark:text-white mb-3">Average score by department</h2>
-          <ComparisonBarChart data={byDept} bars={[{ key: "value", color: "#a78bfa", label: "Avg. score" }]} xKey="name" />
-        </div>
-        <div className="card-surface p-5">
-          <h2 className="font-display font-semibold text-slate-800 dark:text-white mb-3">Risk distribution</h2>
-          <RiskPieChart data={riskCounts} />
-        </div>
-      </div>
-    </DashboardLayout>
-  );
+  const { user } = useAuth(); const [students, setStudents] = useState([]); const [reports, setReports] = useState([]); const [saved, setSaved] = useState(false);
+  const initial = { period: "", subject: COURSES[0].code, customSubject: "", className: "CSE-A", semester: "5", completedTopics: "", challenges: "", achievements: "", nextActions: "" }; const [form, setForm] = useState(initial);
+  const loadReports = () => facultyApi.listSelfReports(user.id).then(setReports);
+  useEffect(() => { studentApi.listAll().then(setStudents); loadReports(); }, [user.id]);
+  const update = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value })); const subject = form.subject === "other" ? form.customSubject.trim() : form.subject;
+  const submit = async (event) => { event.preventDefault(); if (!subject) return; await facultyApi.createSelfReport({ ...form, subject, facultyId: user.id, semester: Number(form.semester) }); setForm(initial); setSaved(true); loadReports(); setTimeout(() => setSaved(false), 2500); };
+  const byDept = Object.values(students.reduce((acc, student) => { acc[student.department] ||= { name: student.department, value: 0, count: 0 }; acc[student.department].value += student.composite.score; acc[student.department].count += 1; return acc; }, {})).map((item) => ({ name: item.name, value: Math.round((item.value / item.count) * 100) / 100 }));
+  const riskCounts = ["excellent", "normal", "at-risk"].map((level) => ({ name: level === "at-risk" ? "At Risk" : level[0].toUpperCase() + level.slice(1), value: students.filter((student) => student.composite.riskLevel === level).length, color: level === "excellent" ? "#22d3ee" : level === "normal" ? "#fbbf24" : "#fb7185" }));
+  return <DashboardLayout role="faculty"><h1 className="font-display text-2xl font-bold text-slate-900 dark:text-white mb-1">Reports & analytics</h1><p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Review student analytics and submit a self-report.</p><div className="grid lg:grid-cols-2 gap-5 mb-6"><div className="card-surface p-5"><h2 className="font-display font-semibold text-slate-800 dark:text-white mb-3">Average score by department</h2><ComparisonBarChart data={byDept} bars={[{ key: "value", color: "#a78bfa", label: "Avg. score" }]} xKey="name" /></div><div className="card-surface p-5"><h2 className="font-display font-semibold text-slate-800 dark:text-white mb-3">Risk distribution</h2><RiskPieChart data={riskCounts} /></div></div><form onSubmit={submit} className="card-surface p-5 grid sm:grid-cols-2 gap-4"><h2 className="font-display font-semibold text-slate-800 dark:text-white sm:col-span-2">Faculty self-report</h2><input required placeholder="Reporting period (e.g. July 2026)" value={form.period} onChange={update("period")} className="input-field" /><select value={form.subject} onChange={update("subject")} className="input-field">{COURSES.map((course) => <option key={course.code} value={course.code}>{course.code}</option>)}<option value="other">Other / Type subject</option></select>{form.subject === "other" && <input required placeholder="Type subject" value={form.customSubject} onChange={update("customSubject")} className="input-field" />}<input required placeholder="Class" value={form.className} onChange={update("className")} className="input-field" /><input required type="number" min="1" max="8" placeholder="Semester" value={form.semester} onChange={update("semester")} className="input-field" /><textarea required placeholder="Completed topics" value={form.completedTopics} onChange={update("completedTopics")} rows={3} className="input-field" /><textarea required placeholder="Challenges" value={form.challenges} onChange={update("challenges")} rows={3} className="input-field" /><textarea required placeholder="Achievements" value={form.achievements} onChange={update("achievements")} rows={3} className="input-field" /><textarea required placeholder="Next actions" value={form.nextActions} onChange={update("nextActions")} rows={3} className="input-field" /><div className="sm:col-span-2 flex gap-3 items-center"><button className="btn-primary">Save self-report</button>{saved && <span className="text-sm text-cyan-500">Self-report saved.</span>}</div></form><div className="mt-6 space-y-3">{reports.map((report) => <div key={report.id} className="card-surface p-4"><p className="font-medium text-slate-800 dark:text-white">{report.period} · {report.subject}</p><p className="text-xs text-slate-400 mt-1">{report.className} · Semester {report.semester}</p><p className="text-sm text-slate-500 mt-2">{report.completedTopics}</p></div>)}</div></DashboardLayout>;
 };
-
 export default FacultyReports;

@@ -1,6 +1,19 @@
-import React from "react";
-import ProfileSettings from "../../components/ProfileSettings";
+import React, { useEffect, useState } from "react";
+import { MdPhotoCamera } from "react-icons/md";
+import DashboardLayout from "../../components/DashboardLayout";
+import { useAuth } from "../../context/AuthContext";
+import { facultyApi } from "../../services/mockApi";
 
-const FacultySettings = () => <ProfileSettings role="faculty" />;
+const emptyProfile = { fullName: "", email: "", employeeId: "", department: "", designation: "", phoneNumber: "", officeLocation: "", profilePhoto: "" };
 
+const FacultySettings = () => {
+  const { user } = useAuth(); const [profile, setProfile] = useState(emptyProfile); const [loading, setLoading] = useState(true); const [saved, setSaved] = useState(false);
+  useEffect(() => { facultyApi.getProfile(user.id).then((faculty) => { setProfile({ ...emptyProfile, ...faculty }); setLoading(false); }); }, [user.id]);
+  const update = (event) => setProfile((current) => ({ ...current, [event.target.name]: event.target.value }));
+  const photo = (event) => { const file = event.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => setProfile((current) => ({ ...current, profilePhoto: reader.result })); reader.readAsDataURL(file); };
+  const save = async (event) => { event.preventDefault(); await facultyApi.updateProfile(user.id, profile); setSaved(true); setTimeout(() => setSaved(false), 2500); };
+  if (loading) return <DashboardLayout role="faculty"><div className="h-64 flex items-center justify-center"><div className="w-8 h-8 rounded-full border-2 border-cyan-400 border-t-transparent animate-spin" /></div></DashboardLayout>;
+  return <DashboardLayout role="faculty"><h1 className="font-display text-2xl font-bold text-slate-900 dark:text-white mb-1">Faculty profile</h1><p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Manage your professional and contact details.</p><form onSubmit={save} className="max-w-4xl card-surface p-5 sm:p-7"><div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-6 mb-6 border-b border-slate-200 dark:border-white/10"><div className="w-20 h-20 rounded-full overflow-hidden bg-cyan-500/15 flex items-center justify-center text-2xl font-bold text-cyan-600 shrink-0">{profile.profilePhoto ? <img src={profile.profilePhoto} alt="Faculty profile" className="w-full h-full object-cover" /> : profile.fullName?.[0]?.toUpperCase() || "F"}</div><div><p className="font-display font-semibold text-slate-800 dark:text-white">Profile photo</p><p className="text-xs text-slate-400 mt-1 mb-3">Upload a JPG or PNG photo.</p><label className="btn-secondary text-sm cursor-pointer inline-flex items-center gap-2"><MdPhotoCamera size={18} />Upload photo<input type="file" accept="image/png,image/jpeg" onChange={photo} className="hidden" /></label></div></div><h2 className="font-display font-semibold text-slate-800 dark:text-white mb-4">Professional details</h2><div className="grid sm:grid-cols-2 gap-4"><Field label="Full name" name="fullName" value={profile.fullName} onChange={update} required /><Field label="Email address" name="email" type="email" value={profile.email} disabled /><Field label="Employee ID" name="employeeId" value={profile.employeeId} onChange={update} required /><Field label="Department" name="department" value={profile.department} onChange={update} required /><Field label="Designation" name="designation" value={profile.designation} onChange={update} required /><Field label="Phone number" name="phoneNumber" type="tel" value={profile.phoneNumber} onChange={update} placeholder="+91 98765 43210" /><Field label="Office location" name="officeLocation" value={profile.officeLocation} onChange={update} placeholder="Block and room number" /></div><div className="flex gap-4 items-center mt-7"><button className="btn-primary">Save profile</button>{saved && <span className="text-sm text-cyan-500">Profile updated successfully.</span>}</div></form></DashboardLayout>;
+};
+const Field = ({ label, ...props }) => <div><label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5 block">{label}</label><input {...props} className="input-field" /></div>;
 export default FacultySettings;
