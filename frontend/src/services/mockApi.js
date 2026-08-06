@@ -239,10 +239,16 @@ export const studentApi = {
     const composite = calculateComposite({ attendancePct, marksPct, submissionPct });
     const assignments = db.assignments
       .filter((a) => a.submissions.some((s) => s.studentId === studentId))
-      .map((a) => ({
-        ...a,
-        status: a.submissions.find((s) => s.studentId === studentId)?.status,
-      }));
+      .map((a) => {
+        const sub = a.submissions.find((s) => s.studentId === studentId);
+        return {
+          ...a,
+          status: sub?.status,
+          marks: sub?.marks ?? null,
+          totalMarks: sub?.totalMarks ?? null,
+          gradedAt: sub?.gradedAt ?? null,
+        };
+      });
     return {
       attendancePct, marksPct, submissionPct, composite,
       assignments,
@@ -259,7 +265,7 @@ export const studentApi = {
     const student = loadDB().students.find((s) => s.id === studentId);
     return portalFor(student);
   },
-  async submitAssignment(assignmentId, studentId, fileName) {
+  async submitAssignment(assignmentId, studentId, fileName, fileData = null) {
     await delay(350);
     const db = loadDB();
     const assignment = db.assignments.find((a) => a.id === assignmentId);
@@ -269,7 +275,21 @@ export const studentApi = {
     submission.fileName = fileName;
     submission.submittedAt = new Date().toISOString();
     saveDB(db);
+    // Store actual file binary separately so faculty can preview/download it.
+    // Uses a dedicated key to keep the main DB payload small.
+    if (fileData) {
+      try {
+        localStorage.setItem(`spms_file_${assignmentId}_${studentId}`, fileData);
+      } catch {
+        // localStorage quota exceeded — file preview unavailable but submission still recorded
+      }
+    }
     return { success: true };
+  },
+
+  // Returns stored file DataURL for a specific submission, or null if not available.
+  getSubmissionFile(assignmentId, studentId) {
+    return localStorage.getItem(`spms_file_${assignmentId}_${studentId}`) || null;
   },
   async updateProfile(studentId, payload) {
     await delay(250);
@@ -333,6 +353,21 @@ export const facultyApi = {
       const sub = assignment.submissions.find((s) => s.studentId === studentId);
       if (sub) sub.status = status;
     }
+    saveDB(db);
+    return { success: true };
+  },
+
+  // Grade a student's assignment submission
+  async setAssignmentMarks(assignmentId, studentId, marks, totalMarks) {
+    await delay(200);
+    const db = loadDB();
+    const assignment = db.assignments.find((a) => a.id === assignmentId);
+    if (!assignment) return { success: false, message: "Assignment not found" };
+    const sub = assignment.submissions.find((s) => s.studentId === studentId);
+    if (!sub) return { success: false, message: "Submission not found" };
+    sub.marks = Number(marks);
+    sub.totalMarks = Number(totalMarks);
+    sub.gradedAt = new Date().toISOString();
     saveDB(db);
     return { success: true };
   },

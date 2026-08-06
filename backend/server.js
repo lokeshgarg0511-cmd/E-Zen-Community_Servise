@@ -1,5 +1,6 @@
 require("dotenv").config();
-console.log("MONGO_URI =", process.env.MONGO_URI);
+const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+console.log("MongoDB URI configured:", mongoUri ? "Yes (defined)" : "No (undefined)");
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");

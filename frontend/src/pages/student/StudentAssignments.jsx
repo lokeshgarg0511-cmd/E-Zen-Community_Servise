@@ -24,7 +24,16 @@ const StudentAssignments = () => {
     const assignmentId = event.target.dataset.assignmentId;
     if (!file || !assignmentId) return;
     setUploading(assignmentId);
-    await studentApi.submitAssignment(assignmentId, user.id, file.name);
+
+    // Read file as DataURL so faculty can preview / download it later
+    const fileData = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
+
+    await studentApi.submitAssignment(assignmentId, user.id, file.name, fileData);
     setData(await studentApi.getDashboard(user.id));
     setUploading(null);
     event.target.value = "";

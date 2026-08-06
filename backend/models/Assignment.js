@@ -16,6 +16,8 @@ const assignmentSchema = new mongoose.Schema(
           default: "pending",
         },
         submittedAt: { type: Date },
+        fileName: { type: String, default: null },   // original filename of uploaded document
+        fileUrl: { type: String, default: null },    // URL/path to stored file (cloud or local)
       },
     ],
   },
