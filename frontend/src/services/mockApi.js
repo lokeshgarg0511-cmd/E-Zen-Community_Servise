@@ -42,6 +42,7 @@ const loadDB = () => {
     db.assessments    ||= [];
     db.selfReports    ||= [];
     db.mentorMeetings ||= [];
+    db.meetingNotifications ||= [];
     return db;
   } catch {
     const fresh = seedDB();
@@ -475,6 +476,60 @@ export const facultyApi = {
       meeting.postponedTime = payload.newTime || null;
     }
     meeting.respondedAt = new Date().toISOString();
+    saveDB(db);
+    return { success: true, meeting };
+  },
+
+  // ── Conduct Meeting: attach a Google Meet link and notify parent ──────────
+  async conductMeeting(meetingId, { meetLink, scheduledDate, scheduledTime }) {
+    await delay(300);
+    const db = loadDB();
+    db.mentorMeetings     ||= [];
+    db.notifications      ||= [];
+    db.meetingNotifications ||= [];
+
+    const meeting = db.mentorMeetings.find((m) => m.id === meetingId);
+    if (!meeting) return { success: false, message: "Meeting not found" };
+
+    // Update meeting record
+    meeting.meetLink      = meetLink;
+    meeting.scheduledDate = scheduledDate || meeting.preferredDate;
+    meeting.scheduledTime = scheduledTime || meeting.preferredTime;
+    meeting.status        = "scheduled";
+    meeting.conductedAt   = new Date().toISOString();
+
+    // Create a system notification for the parent
+    const notifId = `notif_meet_${Math.random().toString(36).slice(2, 9)}`;
+    const notif = {
+      id: notifId,
+      type: "meet_link",
+      recipientId: meeting.parentId,
+      meetingId: meeting.id,
+      title: "Google Meet Link Shared",
+      message: `Your faculty has scheduled a Google Meet for "${meeting.subject}". Join using the link provided.`,
+      meetLink,
+      scheduledDate: meeting.scheduledDate,
+      scheduledTime: meeting.scheduledTime,
+      facultyName: meeting.facultyName,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    };
+    db.notifications.push(notif);
+    db.meetingNotifications.push(notif);
+
+    saveDB(db);
+    return { success: true, meeting };
+  },
+
+  // ── Mark a scheduled meeting as completed ─────────────────────────────────
+  async markMeetingCompleted(meetingId) {
+    await delay(200);
+    const db = loadDB();
+    db.mentorMeetings ||= [];
+    const meeting = db.mentorMeetings.find((m) => m.id === meetingId);
+    if (!meeting) return { success: false, message: "Meeting not found" };
+    meeting.status      = "completed";
+    meeting.completedAt = new Date().toISOString();
     saveDB(db);
     return { success: true, meeting };
   },

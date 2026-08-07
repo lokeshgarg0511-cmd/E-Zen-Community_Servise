@@ -5,7 +5,8 @@ import { facultyApi } from "../../services/mockApi";
 import {
   MdGroups, MdCalendarToday, MdAccessTime, MdPerson,
   MdCheckCircle, MdCancel, MdHourglassEmpty, MdUpdate,
-  MdEventBusy, MdDone, MdFilterList,
+  MdEventBusy, MdDone, MdFilterList, MdVideoCall,
+  MdContentCopy, MdOpenInNew, MdAutorenew, MdSchedule,
 } from "react-icons/md";
 
 // ── Status config ─────────────────────────────────────────────────────────────
@@ -15,6 +16,7 @@ const STATUS_CONFIG = {
   declined:  { label: "Declined",  icon: MdEventBusy,      color: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300" },
   postponed: { label: "Postponed", icon: MdUpdate,         color: "bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300" },
   cancelled: { label: "Cancelled", icon: MdCancel,         color: "bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400" },
+  scheduled: { label: "Scheduled", icon: MdVideoCall,      color: "bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300" },
   completed: { label: "Completed", icon: MdDone,           color: "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300" },
 };
 
@@ -29,9 +31,185 @@ const StatusPill = ({ status }) => {
   );
 };
 
+// ── Utility: generate a simulated Google Meet link ────────────────────────────
+const makeMeetLink = () => {
+  const rand = (n) => Math.random().toString(36).slice(2, 2 + n);
+  return `https://meet.google.com/${rand(3)}-${rand(4)}-${rand(3)}`;
+};
+
+// ── Conduct Meeting Modal ─────────────────────────────────────────────────────
+const ConductMeetingModal = ({ meeting, onClose, onSubmit, conducting }) => {
+  const [meetLink, setMeetLink]           = useState("");
+  const [scheduledDate, setScheduledDate] = useState(meeting.preferredDate || "");
+  const [scheduledTime, setScheduledTime] = useState(meeting.preferredTime || "10:00");
+  const [copied, setCopied]               = useState(false);
+  const [linkError, setLinkError]         = useState(false);
+
+  const handleGenerate = () => {
+    setMeetLink(makeMeetLink());
+    setLinkError(false);
+  };
+
+  const handleCopy = () => {
+    if (!meetLink) return;
+    navigator.clipboard.writeText(meetLink).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!meetLink.trim()) { setLinkError(true); return; }
+    onSubmit(meeting.id, { meetLink: meetLink.trim(), scheduledDate, scheduledTime });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="bg-white dark:bg-navy-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-white/10 w-full max-w-lg">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-white/5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center shadow-md">
+              <MdVideoCall size={20} className="text-white" />
+            </div>
+            <div>
+              <h3 className="font-display font-semibold text-slate-800 dark:text-white text-sm">
+                Conduct Meeting via Google Meet
+              </h3>
+              <p className="text-xs text-slate-400">Share the link with the parent to join</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5"
+          >
+            <MdCancel size={20} />
+          </button>
+        </div>
+
+        {/* Meeting summary strip */}
+        <div className="px-6 py-3 bg-teal-50 dark:bg-teal-900/10 border-b border-teal-100 dark:border-teal-800/30">
+          <p className="text-xs text-teal-700 dark:text-teal-300 flex items-center gap-1.5 font-medium">
+            <MdPerson size={13} />
+            From: <span className="font-semibold ml-0.5">{meeting.parentName || "Parent"}</span>
+            <span className="mx-1 text-teal-300 dark:text-teal-700">·</span>
+            <span className="font-medium">{meeting.subject}</span>
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+
+          {/* Meet Link */}
+          <div>
+            <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-2 flex items-center gap-1">
+              <MdVideoCall size={14} className="text-teal-500" />
+              Google Meet Link <span className="text-red-400 ml-0.5">*</span>
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                placeholder="https://meet.google.com/xxx-xxxx-xxx"
+                value={meetLink}
+                onChange={(e) => { setMeetLink(e.target.value); setLinkError(false); }}
+                className={`input-field flex-1 text-sm font-mono ${linkError ? "border-red-400 dark:border-red-500 ring-1 ring-red-400" : ""}`}
+              />
+              <button
+                type="button"
+                onClick={handleCopy}
+                title="Copy link"
+                className="shrink-0 px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+              >
+                {copied ? <MdCheckCircle size={16} className="text-emerald-500" /> : <MdContentCopy size={16} />}
+              </button>
+            </div>
+            {linkError && (
+              <p className="text-xs text-red-500 mt-1">Please enter or generate a Google Meet link.</p>
+            )}
+            {/* Auto-generate button */}
+            <button
+              type="button"
+              onClick={handleGenerate}
+              className="mt-2 flex items-center gap-1.5 text-xs font-medium text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition-colors group"
+            >
+              <MdAutorenew size={15} className="group-hover:rotate-180 transition-transform duration-500" />
+              Auto-generate a Meet link
+            </button>
+          </div>
+
+          {/* Date & Time */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5 flex items-center gap-1">
+                <MdCalendarToday size={13} /> Scheduled Date
+              </label>
+              <input
+                required
+                type="date"
+                min={new Date().toISOString().slice(0, 10)}
+                value={scheduledDate}
+                onChange={(e) => setScheduledDate(e.target.value)}
+                className="input-field !py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5 flex items-center gap-1">
+                <MdAccessTime size={13} /> Scheduled Time
+              </label>
+              <input
+                required
+                type="time"
+                value={scheduledTime}
+                onChange={(e) => setScheduledTime(e.target.value)}
+                className="input-field !py-2 text-sm"
+              />
+            </div>
+          </div>
+
+          {/* Info note */}
+          <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30 rounded-xl px-4 py-3">
+            <span className="text-sm mt-0.5">📩</span>
+            <p className="text-xs text-amber-700 dark:text-amber-300">
+              Once you click <strong>Share & Notify Parent</strong>, the Meet link will be sent to the parent as a notification and they can join directly from their portal.
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              type="submit"
+              disabled={conducting}
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-50
+                bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white shadow-md hover:shadow-lg"
+            >
+              {conducting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <MdAutorenew size={16} className="animate-spin" /> Sharing…
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-2">
+                  <MdVideoCall size={16} /> Share & Notify Parent
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2.5 rounded-xl text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 // ── Response modal ────────────────────────────────────────────────────────────
 const ResponseModal = ({ meeting, onClose, onSubmit, acting }) => {
-  const [action, setAction]   = useState("accepted"); // accepted | declined | postponed
+  const [action, setAction]   = useState("accepted");
   const [note, setNote]       = useState("");
   const [newDate, setNewDate] = useState("");
   const [newTime, setNewTime] = useState("10:00");
@@ -195,12 +373,16 @@ const ResponseModal = ({ meeting, onClose, onSubmit, acting }) => {
 // ── Main Component ────────────────────────────────────────────────────────────
 const FacultyMeetings = () => {
   const { user } = useAuth();
-  const [meetings, setMeetings]         = useState([]);
-  const [loading, setLoading]           = useState(true);
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [respondTarget, setRespondTarget] = useState(null); // meeting being responded to
-  const [acting, setActing]             = useState(false);
-  const [flashId, setFlashId]           = useState(null);   // for success flash
+  const [meetings, setMeetings]           = useState([]);
+  const [loading, setLoading]             = useState(true);
+  const [filterStatus, setFilterStatus]   = useState("all");
+  const [respondTarget, setRespondTarget] = useState(null);
+  const [conductTarget, setConductTarget] = useState(null);
+  const [acting, setActing]               = useState(false);
+  const [conducting, setConducting]       = useState(false);
+  const [completing, setCompleting]       = useState(null);
+  const [flashId, setFlashId]             = useState(null);
+  const [copiedId, setCopiedId]           = useState(null);
 
   const loadMeetings = async () => {
     setLoading(true);
@@ -211,6 +393,7 @@ const FacultyMeetings = () => {
 
   useEffect(() => { loadMeetings(); }, [user.id]);
 
+  // ── Respond (accept / decline / postpone) ───────────────────────────────
   const handleRespond = async (meetingId, action, payload) => {
     setActing(true);
     await facultyApi.respondToMeeting(meetingId, action, payload);
@@ -221,7 +404,34 @@ const FacultyMeetings = () => {
     loadMeetings();
   };
 
-  // ── derived ───────────────────────────────────────────────────────────────
+  // ── Conduct meeting: attach Meet link and notify parent ──────────────────
+  const handleConduct = async (meetingId, payload) => {
+    setConducting(true);
+    await facultyApi.conductMeeting(meetingId, payload);
+    setConducting(false);
+    setConductTarget(null);
+    setFlashId(meetingId);
+    setTimeout(() => setFlashId(null), 4000);
+    loadMeetings();
+  };
+
+  // ── Mark meeting as completed ─────────────────────────────────────────────
+  const handleComplete = async (meetingId) => {
+    setCompleting(meetingId);
+    await facultyApi.markMeetingCompleted(meetingId);
+    setCompleting(null);
+    loadMeetings();
+  };
+
+  // ── Copy Meet link ────────────────────────────────────────────────────────
+  const handleCopyLink = (link, id) => {
+    navigator.clipboard.writeText(link).then(() => {
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    });
+  };
+
+  // ── Derived ───────────────────────────────────────────────────────────────
   const statusCounts = meetings.reduce((acc, m) => {
     acc[m.status] = (acc[m.status] || 0) + 1;
     return acc;
@@ -231,7 +441,8 @@ const FacultyMeetings = () => {
     (m) => filterStatus === "all" || m.status === filterStatus
   );
 
-  const pendingCount = statusCounts.pending || 0;
+  const pendingCount   = statusCounts.pending   || 0;
+  const scheduledCount = statusCounts.scheduled || 0;
 
   return (
     <DashboardLayout role="faculty">
@@ -245,30 +456,46 @@ const FacultyMeetings = () => {
         />
       )}
 
+      {/* Conduct Meeting Modal */}
+      {conductTarget && (
+        <ConductMeetingModal
+          meeting={conductTarget}
+          onClose={() => setConductTarget(null)}
+          onSubmit={handleConduct}
+          conducting={conducting}
+        />
+      )}
+
       {/* ── Header ── */}
       <div className="flex items-center justify-between mb-1">
         <div>
-          <h1 className="font-display text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <h1 className="font-display text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
             Parent Meeting Requests
             {pendingCount > 0 && (
               <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-500 text-white text-xs font-bold">
                 {pendingCount}
               </span>
             )}
+            {scheduledCount > 0 && (
+              <span className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-full bg-teal-500 text-white text-xs font-bold">
+                <MdVideoCall size={12} /> {scheduledCount} scheduled
+              </span>
+            )}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            Review and respond to meeting requests from parents regarding student progress.
+            Review requests, respond, and conduct Google Meet sessions with parents.
           </p>
         </div>
       </div>
 
       {/* ── Summary stats ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 mb-5">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-5 mb-5">
         {[
-          { label: "Total",     val: meetings.length,          color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300" },
-          { label: "Pending",   val: statusCounts.pending || 0,  color: "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300" },
-          { label: "Accepted",  val: statusCounts.accepted || 0, color: "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300" },
-          { label: "Postponed", val: statusCounts.postponed || 0, color: "bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300" },
+          { label: "Total",     val: meetings.length,            color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300" },
+          { label: "Pending",   val: statusCounts.pending   || 0, color: "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300" },
+          { label: "Accepted",  val: statusCounts.accepted  || 0, color: "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300" },
+          { label: "Scheduled", val: statusCounts.scheduled || 0, color: "bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300" },
+          { label: "Completed", val: statusCounts.completed || 0, color: "bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300" },
         ].map((s) => (
           <div key={s.label} className="card-surface rounded-xl p-4 text-center">
             <span className={`text-2xl font-bold block ${s.color} rounded-lg px-2 py-0.5 mx-auto w-fit`}>
@@ -282,7 +509,7 @@ const FacultyMeetings = () => {
       {/* ── Filter ── */}
       <div className="flex flex-wrap gap-1.5 mb-5 items-center">
         <MdFilterList className="text-slate-400" size={16} />
-        {["all", "pending", "accepted", "declined", "postponed", "cancelled"].map((s) => (
+        {["all", "pending", "accepted", "declined", "postponed", "scheduled", "completed", "cancelled"].map((s) => (
           <button
             key={s}
             onClick={() => setFilterStatus(s)}
@@ -319,17 +546,24 @@ const FacultyMeetings = () => {
       ) : (
         <div className="space-y-3">
           {filtered.map((m) => {
-            const isPending = m.status === "pending";
-            const isFlash   = flashId === m.id;
+            const isPending   = m.status === "pending";
+            const isAccepted  = m.status === "accepted";
+            const isScheduled = m.status === "scheduled";
+            const isPostponed = m.status === "postponed";
+            const isFlash     = flashId === m.id;
 
             return (
               <div
                 key={m.id}
                 className={`card-surface rounded-xl p-5 border transition-all ${
                   isFlash
-                    ? "border-emerald-400 dark:border-emerald-600 bg-emerald-50/30 dark:bg-emerald-900/5"
+                    ? "border-teal-400 dark:border-teal-600 bg-teal-50/30 dark:bg-teal-900/5"
                     : isPending
                     ? "border-amber-200 dark:border-amber-700/40 hover:border-amber-400 dark:hover:border-amber-500"
+                    : isScheduled
+                    ? "border-teal-200 dark:border-teal-700/40 hover:border-teal-400 dark:hover:border-teal-500"
+                    : isAccepted
+                    ? "border-emerald-200 dark:border-emerald-700/40 hover:border-emerald-400"
                     : "border-slate-100 dark:border-white/5 hover:border-indigo-200 dark:hover:border-indigo-700/30"
                 }`}
               >
@@ -338,11 +572,18 @@ const FacultyMeetings = () => {
                   {/* ── Left info ── */}
                   <div className="flex items-start gap-3 min-w-0">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-                      isPending
-                        ? "bg-amber-100 dark:bg-amber-900/30"
-                        : "bg-indigo-100 dark:bg-indigo-900/30"
+                      isPending   ? "bg-amber-100 dark:bg-amber-900/30"
+                      : isScheduled ? "bg-teal-100 dark:bg-teal-900/30"
+                      : isAccepted  ? "bg-emerald-100 dark:bg-emerald-900/30"
+                      : "bg-indigo-100 dark:bg-indigo-900/30"
                     }`}>
-                      <MdGroups size={20} className={isPending ? "text-amber-500" : "text-indigo-500"} />
+                      {isScheduled
+                        ? <MdVideoCall size={20} className="text-teal-500" />
+                        : <MdGroups size={20} className={
+                            isPending   ? "text-amber-500"
+                            : isAccepted  ? "text-emerald-500"
+                            : "text-indigo-500"
+                          } />}
                     </div>
 
                     <div className="min-w-0">
@@ -379,10 +620,10 @@ const FacultyMeetings = () => {
                         </p>
                       )}
 
-                      {/* Faculty's own response note (read-only on card) */}
+                      {/* Faculty response note */}
                       {m.facultyResponse && (
                         <div className={`mt-2 rounded-lg px-3 py-1.5 text-xs border ${
-                          m.status === "accepted"
+                          m.status === "accepted" || m.status === "scheduled"
                             ? "bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-700/30 text-emerald-700 dark:text-emerald-300"
                             : m.status === "declined"
                             ? "bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-700/30 text-red-600 dark:text-red-300"
@@ -401,6 +642,47 @@ const FacultyMeetings = () => {
                           {m.postponedTime && ` at ${m.postponedTime}`}
                         </p>
                       )}
+
+                      {/* ── Google Meet link (scheduled/completed) ── */}
+                      {m.meetLink && (
+                        <div className="mt-3 rounded-xl bg-teal-50 dark:bg-teal-900/10 border border-teal-200 dark:border-teal-700/30 px-4 py-3">
+                          <p className="text-xs font-semibold text-teal-700 dark:text-teal-300 flex items-center gap-1.5 mb-2">
+                            <MdVideoCall size={14} /> Google Meet Session
+                          </p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {/* Scheduled time */}
+                            <div className="flex items-center gap-1.5 text-xs text-teal-600 dark:text-teal-400">
+                              <MdSchedule size={13} />
+                              {m.scheduledDate
+                                ? new Date(m.scheduledDate).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })
+                                : "—"}
+                              {m.scheduledTime && ` at ${m.scheduledTime}`}
+                            </div>
+                          </div>
+                          {/* Link row */}
+                          <div className="mt-2 flex items-center gap-2">
+                            <code className="flex-1 text-xs bg-white dark:bg-navy-950 border border-teal-200 dark:border-teal-800/40 rounded-lg px-2.5 py-1.5 text-teal-700 dark:text-teal-300 truncate font-mono">
+                              {m.meetLink}
+                            </code>
+                            <button
+                              onClick={() => handleCopyLink(m.meetLink, m.id)}
+                              title="Copy link"
+                              className="shrink-0 p-1.5 rounded-lg border border-teal-200 dark:border-teal-700/40 text-teal-500 hover:text-teal-700 dark:hover:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900/30 transition-colors"
+                            >
+                              {copiedId === m.id ? <MdCheckCircle size={14} className="text-emerald-500" /> : <MdContentCopy size={14} />}
+                            </button>
+                            <a
+                              href={m.meetLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="shrink-0 p-1.5 rounded-lg border border-teal-200 dark:border-teal-700/40 text-teal-500 hover:text-teal-700 dark:hover:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900/30 transition-colors"
+                              title="Open in new tab"
+                            >
+                              <MdOpenInNew size={14} />
+                            </a>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -408,6 +690,7 @@ const FacultyMeetings = () => {
                   <div className="flex flex-col items-end gap-2.5 shrink-0">
                     <StatusPill status={m.status} />
 
+                    {/* Respond to pending */}
                     {isPending && (
                       <button
                         onClick={() => setRespondTarget(m)}
@@ -418,8 +701,38 @@ const FacultyMeetings = () => {
                       </button>
                     )}
 
+                    {/* Conduct Meeting button – shown on accepted meetings */}
+                    {isAccepted && (
+                      <button
+                        onClick={() => setConductTarget(m)}
+                        className="flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold
+                          bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600
+                          text-white shadow-sm hover:shadow-md transition-all"
+                      >
+                        <MdVideoCall size={14} />
+                        Conduct Meeting
+                      </button>
+                    )}
+
+                    {/* Mark as Completed – shown on scheduled meetings */}
+                    {isScheduled && (
+                      <button
+                        onClick={() => handleComplete(m.id)}
+                        disabled={completing === m.id}
+                        className="flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold
+                          bg-indigo-600 hover:bg-indigo-700 text-white transition-colors disabled:opacity-50"
+                      >
+                        {completing === m.id ? (
+                          <MdAutorenew size={14} className="animate-spin" />
+                        ) : (
+                          <MdDone size={14} />
+                        )}
+                        {completing === m.id ? "Saving…" : "Mark Completed"}
+                      </button>
+                    )}
+
                     {/* Allow re-responding to accepted/postponed */}
-                    {(m.status === "accepted" || m.status === "postponed") && (
+                    {(isAccepted || isPostponed) && (
                       <button
                         onClick={() => setRespondTarget(m)}
                         className="text-xs text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
