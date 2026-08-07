@@ -28,6 +28,7 @@ import FacultyStudents from "./pages/faculty/FacultyStudents";
 import FacultyAttendance from "./pages/faculty/FacultyAttendance";
 import FacultyMarks from "./pages/faculty/FacultyMarks";
 import FacultyAssignments from "./pages/faculty/FacultyAssignments";
+import FacultyMeetings from "./pages/faculty/FacultyMeetings";
 import FacultyReports from "./pages/faculty/FacultyReports";
 import FacultySettings from "./pages/faculty/FacultySettings";
 
@@ -35,6 +36,7 @@ import ParentDashboard from "./pages/parent/ParentDashboard";
 import ParentAttendance from "./pages/parent/ParentAttendance";
 import ParentMarks from "./pages/parent/ParentMarks";
 import ParentAssignments from "./pages/parent/ParentAssignments";
+import ParentMentorMeeting from "./pages/parent/ParentMentorMeeting";
 import ParentNotifications from "./pages/parent/ParentNotifications";
 import ParentSettings from "./pages/parent/ParentSettings";
 
@@ -77,6 +79,7 @@ function App() {
         <Route path="/faculty/attendance" element={<ProtectedRoute role="faculty"><FacultyAttendance /></ProtectedRoute>} />
         <Route path="/faculty/marks" element={<ProtectedRoute role="faculty"><FacultyMarks /></ProtectedRoute>} />
         <Route path="/faculty/assignments" element={<ProtectedRoute role="faculty"><FacultyAssignments /></ProtectedRoute>} />
+        <Route path="/faculty/meetings" element={<ProtectedRoute role="faculty"><FacultyMeetings /></ProtectedRoute>} />
         <Route path="/faculty/reports" element={<ProtectedRoute role="faculty"><FacultyReports /></ProtectedRoute>} />
         <Route path="/faculty/settings" element={<ProtectedRoute role="faculty"><FacultySettings /></ProtectedRoute>} />
 
@@ -85,6 +88,7 @@ function App() {
         <Route path="/parent/attendance" element={<ProtectedRoute role="parent"><ParentAttendance /></ProtectedRoute>} />
         <Route path="/parent/marks" element={<ProtectedRoute role="parent"><ParentMarks /></ProtectedRoute>} />
         <Route path="/parent/assignments" element={<ProtectedRoute role="parent"><ParentAssignments /></ProtectedRoute>} />
+        <Route path="/parent/mentor-meeting" element={<ProtectedRoute role="parent"><ParentMentorMeeting /></ProtectedRoute>} />
         <Route path="/parent/notifications" element={<ProtectedRoute role="parent"><ParentNotifications /></ProtectedRoute>} />
         <Route path="/parent/settings" element={<ProtectedRoute role="parent"><ParentSettings /></ProtectedRoute>} />
 

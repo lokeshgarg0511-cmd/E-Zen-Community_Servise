@@ -52,6 +52,8 @@ const FacultyAssignments = () => {
   // gradeInputs keyed by `${assignmentId}_${studentId}` → { marks, totalMarks }
   const [gradeInputs, setGradeInputs] = useState({});
   const [savingGrade, setSavingGrade] = useState(null); // key of submission being saved
+  // editingGrades: Set of gradeKeys currently being re-edited after already graded
+  const [editingGrades, setEditingGrades] = useState(new Set());
 
   const initial = {
     title: "",
@@ -116,12 +118,29 @@ const FacultyAssignments = () => {
     setSavingGrade(key);
     await facultyApi.setAssignmentMarks(assignmentId, studentId, marks, totalMarks);
     setSavingGrade(null);
+    // Clear editing state after successful save
+    setEditingGrades((prev) => { const next = new Set(prev); next.delete(key); return next; });
+    setGradeInputs((prev) => { const next = { ...prev }; delete next[key]; return next; });
     load();
   };
 
   const updateGradeInput = (assignmentId, studentId, field, value) => {
     const key = `${assignmentId}_${studentId}`;
     setGradeInputs((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), [field]: value } }));
+  };
+
+  // Enter edit mode for an already-graded submission
+  const startEditGrade = (assignmentId, studentId, existingMarks, existingTotal) => {
+    const key = `${assignmentId}_${studentId}`;
+    setGradeInputs((prev) => ({ ...prev, [key]: { marks: String(existingMarks), totalMarks: String(existingTotal) } }));
+    setEditingGrades((prev) => new Set([...prev, key]));
+  };
+
+  // Cancel editing and revert to graded view
+  const cancelEditGrade = (assignmentId, studentId) => {
+    const key = `${assignmentId}_${studentId}`;
+    setEditingGrades((prev) => { const next = new Set(prev); next.delete(key); return next; });
+    setGradeInputs((prev) => { const next = { ...prev }; delete next[key]; return next; });
   };
 
   return (
@@ -373,7 +392,7 @@ const FacultyAssignments = () => {
 
                         {/* ── Marks / Grading column ─────────────────────── */}
                         <td className="py-3 pr-4">
-                          {isGraded ? (
+                          {isGraded && !editingGrades.has(gradeKey) ? (
                             <div className="flex flex-col gap-0.5">
                               <span className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -386,14 +405,14 @@ const FacultyAssignments = () => {
                               </span>
                               {/* Allow re-grading */}
                               <button
-                                onClick={() => updateGradeInput(gradeKey, "marks", String(submission.marks)) || updateGradeInput(gradeKey, "totalMarks", String(submission.totalMarks))}
+                                onClick={() => startEditGrade(assignment.id, submission.studentId, submission.marks, submission.totalMarks)}
                                 className="text-[10px] text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors text-left"
                               >
-                                Edit grade
+                                ✏️ Edit marks
                               </button>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <input
                                 type="number"
                                 min="0"
@@ -417,8 +436,16 @@ const FacultyAssignments = () => {
                                 onClick={() => saveGrade(assignment.id, submission.studentId)}
                                 className="btn-primary !py-1 !px-2 text-xs disabled:opacity-40"
                               >
-                                {isSaving ? "…" : "Save"}
+                                {isSaving ? "…" : isGraded ? "Update" : "Save"}
                               </button>
+                              {isGraded && (
+                                <button
+                                  onClick={() => cancelEditGrade(assignment.id, submission.studentId)}
+                                  className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                              )}
                             </div>
                           )}
                         </td>

@@ -10,7 +10,7 @@ import {
   DEMO_PASSWORD,
 } from "./seedData";
 
-const STORE_KEY = "spms_db_v1";
+const STORE_KEY = "spms_db_v2";
 const SESSION_KEY = "spms_session_v1";
 
 const seedDB = () => ({
@@ -39,8 +39,9 @@ const loadDB = () => {
       return fresh;
     }
     const db = JSON.parse(raw);
-    db.assessments ||= [];
-    db.selfReports ||= [];
+    db.assessments    ||= [];
+    db.selfReports    ||= [];
+    db.mentorMeetings ||= [];
     return db;
   } catch {
     const fresh = seedDB();
@@ -310,6 +311,16 @@ export const studentApi = {
     }
     if (filters.riskLevel) list = list.filter((s) => s.composite.riskLevel === filters.riskLevel);
     if (filters.department) list = list.filter((s) => s.department === filters.department);
+    if (filters.section) list = list.filter((s) => s.section === filters.section);
+    if (filters.course) {
+      // Filter students who have attendance or marks records for the given course
+      const courseStudentIds = new Set([
+        ...db.attendance.filter((a) => a.course === filters.course).map((a) => a.studentId),
+        ...db.marks.filter((m) => m.course === filters.course).map((m) => m.studentId),
+        ...db.assignments.filter((a) => a.course === filters.course).flatMap((a) => a.submissions.map((s) => s.studentId)),
+      ]);
+      list = list.filter((s) => courseStudentIds.has(s.id));
+    }
     return list;
   },
 };
@@ -344,6 +355,23 @@ export const facultyApi = {
     db.marks.push({ id: uid("mk"), studentId, course, examType, marksObtained: Number(marksObtained), totalMarks: Number(totalMarks), ...details });
     saveDB(db);
     return { success: true };
+  },
+  async updateMarks(markId, fields) {
+    await delay(200);
+    const db = loadDB();
+    const record = db.marks.find((m) => m.id === markId);
+    if (!record) return { success: false, message: "Record not found" };
+    if (fields.marksObtained !== undefined) record.marksObtained = Number(fields.marksObtained);
+    if (fields.totalMarks !== undefined) record.totalMarks = Number(fields.totalMarks);
+    if (fields.examType !== undefined) record.examType = fields.examType;
+    if (fields.course !== undefined) record.course = fields.course;
+    saveDB(db);
+    return { success: true, record };
+  },
+  async getMarks(studentId = null) {
+    await delay(150);
+    const db = loadDB();
+    return studentId ? db.marks.filter((m) => m.studentId === studentId) : db.marks;
   },
   async updateSubmission(assignmentId, studentId, status) {
     await delay(200);
@@ -421,6 +449,35 @@ export const facultyApi = {
     saveDB(db);
     return { success: true, faculty };
   },
+
+  // ── Meeting Requests (Faculty side) ─────────────────────────────────────
+  async getMeetingRequests(facultyId) {
+    await delay(200);
+    const db = loadDB();
+    db.mentorMeetings ||= [];
+    // Return meetings addressed to this faculty (or all if no facultyId set, for backwards-compat)
+    return db.mentorMeetings.filter(
+      (m) => m.facultyId === facultyId || (!m.facultyId && m.status === "pending")
+    );
+  },
+
+  // action: "accepted" | "declined" | "postponed"
+  async respondToMeeting(meetingId, action, payload = {}) {
+    await delay(250);
+    const db = loadDB();
+    db.mentorMeetings ||= [];
+    const meeting = db.mentorMeetings.find((m) => m.id === meetingId);
+    if (!meeting) return { success: false, message: "Meeting not found" };
+    meeting.status = action;
+    meeting.facultyResponse = payload.note || null;
+    if (action === "postponed") {
+      meeting.postponedDate = payload.newDate || null;
+      meeting.postponedTime = payload.newTime || null;
+    }
+    meeting.respondedAt = new Date().toISOString();
+    saveDB(db);
+    return { success: true, meeting };
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -440,7 +497,16 @@ export const parentApi = {
       student, attendancePct, marksPct, submissionPct,
       assignments: db.assignments
         .filter((a) => a.submissions.some((s) => s.studentId === student.id))
-        .map((a) => ({ ...a, status: a.submissions.find((s) => s.studentId === student.id)?.status })),
+        .map((a) => {
+          const sub = a.submissions.find((s) => s.studentId === student.id);
+          return {
+            ...a,
+            status: sub?.status,
+            marks: sub?.marks ?? null,
+            totalMarks: sub?.totalMarks ?? null,
+            gradedAt: sub?.gradedAt ?? null,
+          };
+        }),
       marks: db.marks.filter((m) => m.studentId === student.id),
       attendanceRecords: db.attendance
         .filter((a) => a.studentId === student.id)
@@ -448,6 +514,64 @@ export const parentApi = {
       trend: db.warningHistory[student.id] || [],
       notifications: db.notifications.filter((n) => n.recipientId === parentId || n.recipientId === student.id),
     };
+  },
+
+  // List all faculty (for the meeting-request faculty-selection dropdown)
+  async listFaculty() {
+    await delay(150);
+    return loadDB().faculty.map((f) => ({
+      id: f.id,
+      fullName: f.fullName,
+      designation: f.designation || "Faculty",
+      department: f.department,
+      subjects: f.subjects || [],
+      email: f.email,
+    }));
+  },
+
+  // ── Mentor Meeting Requests ──────────────────────────────────────────────
+  async getMentorMeetings(parentId) {
+    await delay(200);
+    const db = loadDB();
+    db.mentorMeetings ||= [];
+    return db.mentorMeetings.filter((m) => m.parentId === parentId);
+  },
+
+  async requestMentorMeeting(parentId, payload) {
+    await delay(300);
+    const db = loadDB();
+    db.mentorMeetings ||= [];
+    const parent = db.parents.find((p) => p.id === parentId);
+    const meeting = {
+      id: `mtg_${Math.random().toString(36).slice(2, 9)}`,
+      parentId,
+      parentName: parent?.fullName || "Parent",
+      facultyId: payload.facultyId || null,
+      facultyName: payload.facultyName || null,
+      subject: payload.subject,
+      preferredDate: payload.preferredDate,
+      preferredTime: payload.preferredTime,
+      message: payload.message,
+      status: "pending", // pending | accepted | declined | postponed | cancelled
+      createdAt: new Date().toISOString(),
+      facultyResponse: null,
+      postponedDate: null,
+      postponedTime: null,
+    };
+    db.mentorMeetings.push(meeting);
+    saveDB(db);
+    return { success: true, meeting };
+  },
+
+  async cancelMeetingRequest(meetingId) {
+    await delay(200);
+    const db = loadDB();
+    db.mentorMeetings ||= [];
+    const meeting = db.mentorMeetings.find((m) => m.id === meetingId);
+    if (!meeting) return { success: false };
+    meeting.status = "cancelled";
+    saveDB(db);
+    return { success: true };
   },
 };
 

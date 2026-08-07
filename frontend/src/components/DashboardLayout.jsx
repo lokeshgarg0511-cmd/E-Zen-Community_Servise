@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
+import Footer from "./Footer";
 
 const DashboardLayout = ({ role, unreadCount, notificationsTo, children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -11,6 +12,7 @@ const DashboardLayout = ({ role, unreadCount, notificationsTo, children }) => {
       <div className="flex-1 min-w-0 flex flex-col">
         <Topbar onMenuClick={() => setSidebarOpen(true)} unreadCount={unreadCount} notificationsTo={notificationsTo} />
         <main className="flex-1 p-4 sm:p-6 max-w-[1400px] w-full mx-auto">{children}</main>
+        <Footer />
       </div>
     </div>
   );

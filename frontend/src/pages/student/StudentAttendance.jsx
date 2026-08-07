@@ -2,9 +2,25 @@ import React, { useEffect, useState } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
 import Card from "../../components/Card";
 import Badge from "../../components/Badge";
-import { MdEventAvailable } from "react-icons/md";
+import { MdEventAvailable, MdMenuBook } from "react-icons/md";
 import { useAuth } from "../../context/AuthContext";
 import { studentApi } from "../../services/mockApi";
+
+// Compute subject-wise attendance from flat records
+const computeSubjectStats = (records = []) => {
+  const map = {};
+  records.forEach((r) => {
+    if (!map[r.course]) map[r.course] = { total: 0, present: 0 };
+    map[r.course].total += 1;
+    if (r.status === "present") map[r.course].present += 1;
+  });
+  return Object.entries(map).map(([course, { total, present }]) => ({
+    course,
+    total,
+    present,
+    percentage: total ? Math.round((present / total) * 10000) / 100 : 0,
+  }));
+};
 
 const StudentAttendance = () => {
   const { user } = useAuth();
@@ -14,6 +30,8 @@ const StudentAttendance = () => {
     studentApi.getDashboard(user.id).then(setData);
   }, [user.id]);
 
+  const subjectStats = data ? computeSubjectStats(data.attendanceRecords) : [];
+
   return (
     <DashboardLayout role="student">
       <h1 className="font-display text-2xl font-bold text-slate-900 dark:text-white mb-1">Attendance</h1>
@@ -21,12 +39,49 @@ const StudentAttendance = () => {
 
       {data && (
         <>
+          {/* Overall summary cards */}
           <div className="grid sm:grid-cols-3 gap-4 mb-6">
             <Card icon={<MdEventAvailable />} label="Overall percentage" value={`${data.attendancePct}%`} accent="violet" />
             <Card label="Status" value={data.attendancePct >= 75 ? "Healthy" : "Below requirement"} accent={data.attendancePct >= 75 ? "cyan" : "coral"} />
             <Card label="Minimum required" value="75%" accent="amber" />
           </div>
 
+          {/* Subject-wise breakdown */}
+          {subjectStats.length > 0 && (
+            <div className="card-surface p-5 mb-6">
+              <h2 className="font-display font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                <MdMenuBook size={18} className="text-cyan-500" />
+                Subject-wise attendance
+              </h2>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {subjectStats.map(({ course, total, present, percentage }) => {
+                  const color =
+                    percentage >= 75
+                      ? "from-cyan-500/10 to-cyan-500/5 border-cyan-500/20 text-cyan-600 dark:text-cyan-400"
+                      : "from-rose-500/10 to-rose-500/5 border-rose-500/20 text-rose-600 dark:text-rose-400";
+                  return (
+                    <div
+                      key={course}
+                      className={`rounded-xl border bg-gradient-to-br p-4 ${color}`}
+                    >
+                      <p className="font-semibold text-sm text-slate-800 dark:text-white mb-1">{course}</p>
+                      <p className="text-3xl font-bold mb-1">{percentage}%</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {present} present out of {total} classes
+                      </p>
+                      {percentage < 75 && (
+                        <span className="inline-block mt-2 text-[10px] font-semibold bg-rose-500/20 text-rose-600 dark:text-rose-400 rounded-full px-2 py-0.5">
+                          Below 75%
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Recent records table */}
           <div className="card-surface p-5">
             <h2 className="font-display font-semibold text-slate-800 dark:text-white mb-4">Recent records</h2>
             <div className="overflow-x-auto">

@@ -53,8 +53,16 @@ const StudentAssignments = () => {
               <p className="text-xs text-slate-400 mt-0.5">{a.course} &middot; due {new Date(a.dueDate).toLocaleDateString()}</p>
               {a.description && <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5">{a.description}</p>}
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <Badge status={a.status} />
+
+              {/* Faculty-awarded marks chip */}
+              {a.marks !== null && a.marks !== undefined && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20">
+                  Marks: {a.marks} / {a.totalMarks ?? 100}
+                </span>
+              )}
+
               {a.status !== "submitted" && (
                 <button onClick={() => chooseFile(a.id)} disabled={uploading === a.id} className="btn-primary text-xs py-2">
                   {uploading === a.id ? "Uploading…" : "Upload"}
