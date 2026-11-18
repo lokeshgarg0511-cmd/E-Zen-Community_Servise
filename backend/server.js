@@ -21,6 +21,11 @@ const assignmentRoutes = require("./routes/assignmentRoutes");
 const marksRoutes = require("./routes/marksRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const reportRoutes = require("./routes/reportRoutes");
+const feeRoutes = require("./routes/feeRoutes");
+const qrRoutes = require("./routes/qrRoutes");
+const correctionRoutes = require("./routes/correctionRoutes");
+const resourceRoutes = require("./routes/resourceRoutes");
+const auditRoutes = require("./routes/auditRoutes");
 
 const app = express();
 
@@ -50,8 +55,13 @@ app.use("/api/assignments", assignmentRoutes);
 app.use("/api/marks", marksRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/fees", feeRoutes);
+app.use("/api/qr", qrRoutes);
+app.use("/api/corrections", correctionRoutes);
+app.use("/api/resources", resourceRoutes);
+app.use("/api/audit", auditRoutes);
 
-app.get("/api/health", (req, res) => res.json({ success: true, message: "SPMS API is running" }));
+app.get("/api/health", (req, res) => res.json({ success: true, message: "E-Zen API is running" }));
 
 app.use(notFound);
 app.use(errorHandler);

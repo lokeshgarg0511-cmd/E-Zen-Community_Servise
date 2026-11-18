@@ -5,18 +5,19 @@
 html { scroll-behavior: smooth; }
 
 body {
-  @apply bg-slate-50 text-slate-800 font-body antialiased dark:bg-navy-950 dark:text-slate-100;
+  @apply bg-[#06030C] text-slate-100 font-body antialiased;
+  background-color: #06030C;
 }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.35); border-radius: 999px; }
-.dark ::-webkit-scrollbar-thumb { background: rgba(34,211,238,0.25); }
+::-webkit-scrollbar-track { background: #06030C; }
+::-webkit-scrollbar-thumb { background: rgba(142, 69, 133, 0.4); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0, 229, 255, 0.6); }
 
 :focus-visible {
-  outline: 2px solid #22d3ee;
+  outline: 2px solid #00E5FF;
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -24,26 +25,51 @@ body {
 }
 
 .card-surface {
-  @apply bg-white border border-slate-200 shadow-card rounded-2xl dark:bg-navy-800 dark:border-white/5;
+  @apply bg-[#0D0819] border border-white/10 shadow-card rounded-2xl;
+  background: linear-gradient(180deg, rgba(19, 13, 36, 0.85) 0%, rgba(11, 7, 22, 0.95) 100%);
+  backdrop-filter: blur(12px);
+}
+
+.card-surface-hover {
+  @apply transition-all duration-300 hover:border-[#00E5FF]/40 hover:shadow-glow;
 }
 
 .input-field {
-  @apply w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-800
-    placeholder:text-slate-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none
-    transition dark:bg-navy-700 dark:border-white/10 dark:text-slate-100 dark:placeholder:text-slate-500;
+  @apply w-full px-4 py-2.5 rounded-xl border border-white/15 bg-[#130D24] text-sm text-slate-100
+    placeholder:text-slate-500 focus:border-[#00E5FF] focus:ring-2 focus:ring-[#00E5FF]/20 outline-none
+    transition;
 }
 
 .btn-primary {
   @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm
-    bg-cyan-500 text-navy-950 hover:bg-cyan-400 active:scale-[0.98] transition shadow-glow disabled:opacity-50 disabled:cursor-not-allowed;
+    bg-[#00E5FF] text-[#06030C] hover:bg-[#6BF2FF] active:scale-[0.98] transition shadow-glow disabled:opacity-50 disabled:cursor-not-allowed;
 }
 
 .btn-secondary {
   @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm
-    border border-slate-300 text-slate-700 hover:bg-slate-100 active:scale-[0.98] transition
-    dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/5;
+    bg-[#8E4585]/20 border border-[#8E4585]/50 text-white hover:bg-[#8E4585]/40 hover:border-[#8E4585]
+    active:scale-[0.98] transition shadow-glowPurple disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-outline {
+  @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm
+    border border-white/15 text-slate-200 hover:bg-white/5 active:scale-[0.98] transition;
 }
 
 .badge {
   @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold;
+}
+
+.badge-cyan {
+  @apply bg-[#00E5FF]/10 text-[#00E5FF] border border-[#00E5FF]/30;
+}
+
+.badge-purple {
+  @apply bg-[#8E4585]/15 text-[#C476BB] border border-[#8E4585]/35;
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #00E5FF 0%, #C476BB 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }

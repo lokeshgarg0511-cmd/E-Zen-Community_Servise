@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive Lamp Login</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+<style>
+:root {
+  --lamp-accent: #ffad3d;
+  --lamp-secondary: #ff8b21;
+  --bg: #0b0d10;
+  --card: #11141c;
+  --text: #f5f5f5;
+  --muted: #858998;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 20% 40%, #312517, transparent 35%),
+    radial-gradient(circle at 80% 20%, #171923, transparent 40%),
+    var(--bg);
+  overflow-x: hidden;
+}
+
+.container {
+  width: 100%;
+  max-width: 1050px;
+  min-height: 580px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 35px;
+  padding: 30px;
+  border: 1px solid #292b32;
+  border-radius: 22px;
+  background: rgba(12, 14, 19, 0.8);
+  box-shadow: 0 25px 80px #0008;
+  overflow: hidden;
+}
+
+.lamp-area {
+  min-height: 450px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.light-glow {
+  position: absolute;
+  top: 35%;
+  left: 50%;
+  width: 280px;
+  height: 280px;
+  transform: translate(-50%, -30%);
+  background: radial-gradient(
+    circle,
+    #ffbd4b35 0%,
+    #ffb33314 40%,
+    transparent 70%
+  );
+  border-radius: 50%;
+  transition: 0.4s;
+}
+
+.lamp {
+  position: relative;
+  width: 220px;
+  height: 320px;
+  z-index: 1;
+}
+
+.shade {
+  position: absolute;
+  top: 35px;
+  left: 57px;
+  width: 105px;
+  height: 80px;
+  border-radius: 55% 55% 35% 35%;
+  background: linear-gradient(135deg, #303442, #08090d 65%);
+  border: 2px solid #41424b;
+  box-shadow: 0 0 24px #ffb94755;
+  transform: rotate(-5deg);
+  z-index: 3;
+}
+
+.shade::after {
+  content: "";
+  position: absolute;
+  left: -5px;
+  right: -5px;
+  bottom: -5px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ffce70;
+  box-shadow: 0 0 25px #ffad3d;
+}
+
+.bulb {
+  position: absolute;
+  top: 108px;
+  left: 101px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #fff0b0;
+  box-shadow: 0 0 30px 12px #ffb83d65;
+  z-index: 2;
+}
+
+.arm {
+  position: absolute;
+  width: 7px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #555965, #17191f);
+  transform-origin: top center;
+  border: 1px solid #51535d;
+}
+
+.arm-one {
+  top: 116px;
+  left: 100px;
+  height: 100px;
+  transform: rotate(-12deg);
+}
+
+.arm-two {
+  top: 207px;
+  left: 78px;
+  height: 90px;
+  transform: rotate(-8deg);
+}
+
+.joint {
+  position: absolute;
+  top: 202px;
+  left: 68px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffcc60, #72501e);
+  border: 2px solid #33291a;
+}
+
+.base {
+  position: absolute;
+  bottom: 0;
+  left: 40px;
+  width: 100px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(#30333d, #08090c);
+  border: 2px solid #373a42;
+  box-shadow: 0 8px 20px #000;
+}
+
+.card {
+  width: 100%;
+  max-width: 390px;
+  margin: auto;
+  padding: 30px 25px;
+  border: 1px solid #282b34;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #15171e, #0e1016);
+  box-shadow: 0 20px 55px #0007;
+}
+
+.card h1 {
+  font-size: 27px;
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 23px;
+}
+
+.tabs {
+  display: flex;
+  gap: 5px;
+  padding: 5px;
+  margin-bottom: 25px;
+  background: #080a0e;
+  border-radius: 10px;
+}
+
+.tabs button {
+  width: 50%;
+  padding: 11px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #9a9da8;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.tabs button.active {
+  background: #303239;
+  color: white;
+}
+
+.field {
+  margin-bottom: 18px;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 9px;
+  font-size: 12px;
+  color: #b7bac5;
+}
+
+.field input {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid #2d3039;
+  border-radius: 9px;
+  outline: none;
+  background: #1c1f28;
+  color: white;
+  transition: 0.25s;
+}
+
+.field input:focus {
+  border-color: var(--lamp-accent);
+  box-shadow: 0 0 12px #ffad3d18;
+}
+
+.password-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.password-heading a {
+  color: var(--lamp-accent);
+  font-size: 11px;
+  text-decoration: none;
+  margin-bottom: 9px;
+}
+
+.remember {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  margin: 3px 0 20px;
+  font-size: 12px;
+  color: #c1c3cb;
+  cursor: pointer;
+}
+
+.remember input {
+  accent-color: var(--lamp-accent);
+}
+
+.submit-btn {
+  position: relative;
+  width: 100%;
+  padding: 14px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(
+    135deg,
+    var(--lamp-accent),
+    var(--lamp-secondary)
+  );
+  color: #17100a;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px #ffad3d35;
+}
+
+.submit-btn:active {
+  transform: translateY(0);
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 23px 0 16px;
+  color: #727582;
+  font-size: 10px;
+  justify-content: center;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: #292c34;
+}
+
+.social-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
+}
+
+.social-buttons button {
+  padding: 12px 5px;
+  border: 1px solid #292c34;
+  border-radius: 9px;
+  background: #1a1c24;
+  color: #e5e5e8;
+  cursor: pointer;
+  transition: 0.25s;
+}
+
+.social-buttons button:hover {
+  border-color: var(--lamp-accent);
+  background: #242630;
+}
+
+.color-picker {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.color-picker button {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #ffffff55;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.color-picker button:focus {
+  outline: 2px solid white;
+  outline-offset: 3px;
+}
+
+.message {
+  min-height: 17px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--lamp-accent);
+  text-align: center;
+}
+
+@media (max-width: 700px) {
+  .container {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 18px;
+  }
+
+  .lamp-area {
+    min-height: 250px;
+  }
+
+  .lamp {
+    transform: scale(0.75);
+  }
+
+  .card {
+    max-width: 100%;
+    padding: 25px 20px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="lamp-area">
+    <div class="light-glow" id="lightGlow"></div>
+
+    <div class="lamp">
+      <div class="shade"></div>
+      <div class="bulb"></div>
+      <div class="arm arm-one"></div>
+      <div class="joint"></div>
+      <div class="arm arm-two"></div>
+      <div class="base"></div>
+    </div>
+  </div>
+
+  <div class="card">
+
+    <h1 id="cardTitle">Welcome</h1>
+    <p class="subtitle" id="cardSubtitle">
+      Sign in to continue to your account
+    </p>
+
+    <div class="tabs" id="authTabs" data-active="signin">
+      <button id="tabSignIn" class="active" type="button">
+        Sign In
+      </button>
+      <button id="tabRegister" type="button">
+        Sign Up
+      </button>
+    </div>
+
+    <form id="loginForm">
+
+      <div class="field">
+        <label for="username">Username or Email</label>
+        <input
+          type="text"
+          id="username"
+          placeholder="Enter username or email"
+          autocomplete="username"
+          required
+        >
+      </div>
+
+      <div class="field">
+        <div class="password-heading">
+          <label for="password">Password</label>
+          <a href="#" id="forgotLink">Forgot?</a>
+        </div>
+
+        <input
+          type="password"
+          id="password"
+          placeholder="Enter password"
+          autocomplete="current-password"
+          required
+        >
+      </div>
+
+      <label class="remember">
+        <input type="checkbox" id="remember">
+        Remember me
+      </label>
+
+      <button class="submit-btn" type="submit">
+        <span id="btnText">Sign In</span> &rarr;
+      </button>
+
+      <p class="message" id="message" aria-live="polite"></p>
+    </form>
+
+    <p class="divider">OR CONTINUE WITH</p>
+
+    <div class="social-buttons">
+      <button type="button" data-provider="Google">Google</button>
+      <button type="button" data-provider="GitHub">GitHub</button>
+      <button type="button" data-provider="Apple">Apple</button>
+    </div>
+
+    <div class="color-picker" aria-label="Lamp color">
+      <button type="button" style="background:#ffad3d"
+        data-color="#ffad3d" aria-label="Orange"></button>
+      <button type="button" style="background:#ff4d91"
+        data-color="#ff4d91" aria-label="Pink"></button>
+      <button type="button" style="background:#21d4fd"
+        data-color="#21d4fd" aria-label="Blue"></button>
+      <button type="button" style="background:#49e58b"
+        data-color="#49e58b" aria-label="Green"></button>
+      <button type="button" style="background:#b18aff"
+        data-color="#b18aff" aria-label="Purple"></button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const tabSignIn = document.getElementById("tabSignIn");
+const tabRegister = document.getElementById("tabRegister");
+const authTabs = document.getElementById("authTabs");
+const cardTitle = document.getElementById("cardTitle");
+const cardSubtitle = document.getElementById("cardSubtitle");
+const btnText = document.getElementById("btnText");
+const loginForm = document.getElementById("loginForm");
+const password = document.getElementById("password");
+const message = document.getElementById("message");
+const lightGlow = document.getElementById("lightGlow");
+
+let activeTab = "signin";
+
+tabSignIn.addEventListener("click", () => switchTab("signin"));
+tabRegister.addEventListener("click", () => switchTab("register"));
+
+function switchTab(tab) {
+  if (activeTab === tab) return;
+
+  activeTab = tab;
+  authTabs.setAttribute("data-active", tab);
+
+  tabSignIn.classList.toggle("active", tab === "signin");
+  tabRegister.classList.toggle("active", tab === "register");
+
+  if (tab === "signin") {
+    cardTitle.textContent = "Welcome";
+    cardSubtitle.textContent =
+      "Sign in to continue to your account";
+    btnText.textContent = "Sign In";
+    password.autocomplete = "current-password";
+  } else {
+    cardTitle.textContent = "Create Account";
+    cardSubtitle.textContent =
+      "Create an account to get started";
+    btnText.textContent = "Create Account";
+    password.autocomplete = "new-password";
+  }
+
+  message.textContent = "";
+
+  if (window.gsap) {
+    gsap.fromTo(
+      [cardTitle, cardSubtitle],
+      { opacity: 0.5, y: 5 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.3,
+        ease: "power2.out"
+      }
+    );
+  }
+}
+
+document.querySelectorAll("[data-color]").forEach(button => {
+  button.addEventListener("click", () => {
+    const color = button.dataset.color;
+
+    document.documentElement.style.setProperty(
+      "--lamp-accent", color
+    );
+
+    lightGlow.style.background =
+      `radial-gradient(circle, ${color}45, transparent 70%)`;
+  });
+});
+
+document.getElementById("forgotLink").addEventListener(
+  "click", event => {
+    event.preventDefault();
+    message.textContent =
+      "Password reset requires a connected authentication service.";
+  }
+);
+
+loginForm.addEventListener("submit", event => {
+  event.preventDefault();
+
+  message.textContent =
+    activeTab === "signin"
+      ? "Demo only: connect a backend to sign in."
+      : "Demo only: connect a backend to create an account.";
+});
+
+document.querySelectorAll("[data-provider]").forEach(button => {
+  button.addEventListener("click", () => {
+    message.textContent =
+      button.dataset.provider +
+      " login requires OAuth authentication setup.";
+  });
+});
+</script>
+
+</body>
+</html>

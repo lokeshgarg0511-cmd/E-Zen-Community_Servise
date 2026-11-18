@@ -22,6 +22,9 @@ import StudentCourses from "./pages/student/StudentCourses";
 import StudentSyllabus from "./pages/student/StudentSyllabus";
 import StudentTimetable from "./pages/student/StudentTimetable";
 import StudentMentorMeetings from "./pages/student/StudentMentorMeetings";
+import StudentFees from "./pages/student/StudentFees";
+import StudentQrScanner from "./pages/student/StudentQrScanner";
+import StudentResources from "./pages/student/StudentResources";
 
 import FacultyDashboard from "./pages/faculty/FacultyDashboard";
 import FacultyStudents from "./pages/faculty/FacultyStudents";
@@ -31,6 +34,9 @@ import FacultyAssignments from "./pages/faculty/FacultyAssignments";
 import FacultyMeetings from "./pages/faculty/FacultyMeetings";
 import FacultyReports from "./pages/faculty/FacultyReports";
 import FacultySettings from "./pages/faculty/FacultySettings";
+import FacultyQrSession from "./pages/faculty/FacultyQrSession";
+import FacultyCorrections from "./pages/faculty/FacultyCorrections";
+import FacultyResources from "./pages/faculty/FacultyResources";
 
 import ParentDashboard from "./pages/parent/ParentDashboard";
 import ParentAttendance from "./pages/parent/ParentAttendance";
@@ -47,6 +53,9 @@ import AdminDepartments from "./pages/admin/AdminDepartments";
 import AdminCourses from "./pages/admin/AdminCourses";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminCorrections from "./pages/admin/AdminCorrections";
+import AdminFees from "./pages/admin/AdminFees";
+import AdminAuditLogs from "./pages/admin/AdminAuditLogs";
 
 function App() {
   const { user } = useAuth();
@@ -72,6 +81,9 @@ function App() {
         <Route path="/student/syllabus" element={<ProtectedRoute role="student"><StudentSyllabus /></ProtectedRoute>} />
         <Route path="/student/timetable" element={<ProtectedRoute role="student"><StudentTimetable /></ProtectedRoute>} />
         <Route path="/student/mentor-meetings" element={<ProtectedRoute role="student"><StudentMentorMeetings /></ProtectedRoute>} />
+        <Route path="/student/fees" element={<ProtectedRoute role="student"><StudentFees /></ProtectedRoute>} />
+        <Route path="/student/qr-scanner" element={<ProtectedRoute role="student"><StudentQrScanner /></ProtectedRoute>} />
+        <Route path="/student/resources" element={<ProtectedRoute role="student"><StudentResources /></ProtectedRoute>} />
 
         {/* Faculty */}
         <Route path="/faculty" element={<ProtectedRoute role="faculty"><FacultyDashboard /></ProtectedRoute>} />
@@ -82,6 +94,9 @@ function App() {
         <Route path="/faculty/meetings" element={<ProtectedRoute role="faculty"><FacultyMeetings /></ProtectedRoute>} />
         <Route path="/faculty/reports" element={<ProtectedRoute role="faculty"><FacultyReports /></ProtectedRoute>} />
         <Route path="/faculty/settings" element={<ProtectedRoute role="faculty"><FacultySettings /></ProtectedRoute>} />
+        <Route path="/faculty/qr-session" element={<ProtectedRoute role="faculty"><FacultyQrSession /></ProtectedRoute>} />
+        <Route path="/faculty/corrections" element={<ProtectedRoute role="faculty"><FacultyCorrections /></ProtectedRoute>} />
+        <Route path="/faculty/resources" element={<ProtectedRoute role="faculty"><FacultyResources /></ProtectedRoute>} />
 
         {/* Parent */}
         <Route path="/parent" element={<ProtectedRoute role="parent"><ParentDashboard /></ProtectedRoute>} />
@@ -100,6 +115,9 @@ function App() {
         <Route path="/admin/courses" element={<ProtectedRoute role="admin"><AdminCourses /></ProtectedRoute>} />
         <Route path="/admin/reports" element={<ProtectedRoute role="admin"><AdminReports /></ProtectedRoute>} />
         <Route path="/admin/settings" element={<ProtectedRoute role="admin"><AdminSettings /></ProtectedRoute>} />
+        <Route path="/admin/corrections" element={<ProtectedRoute role="admin"><AdminCorrections /></ProtectedRoute>} />
+        <Route path="/admin/fees" element={<ProtectedRoute role="admin"><AdminFees /></ProtectedRoute>} />
+        <Route path="/admin/audit-logs" element={<ProtectedRoute role="admin"><AdminAuditLogs /></ProtectedRoute>} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>

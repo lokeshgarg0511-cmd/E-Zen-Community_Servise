@@ -19,13 +19,44 @@ export const AuthProvider = ({ children }) => {
     return res;
   };
 
+  const loginWithOtp = async (payload) => {
+    const res = await authApi.loginWithOtp(payload);
+    if (res.success) setUser(res.user);
+    return res;
+  };
+
+  const loginWithSocial = async (payload) => {
+    const res = await authApi.loginWithSocial(payload);
+    if (res.success) setUser(res.user);
+    return res;
+  };
+
+  const loginDemo = async (demoKey) => {
+    const res = await authApi.loginDemo(demoKey);
+    if (res.success) setUser(res.user);
+    return res;
+  };
+
   const logout = () => {
     authApi.logout();
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, login, logout, loading }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        setUser,
+        login,
+        loginWithOtp,
+        loginWithSocial,
+        loginDemo,
+        sendOtp: authApi.sendOtp,
+        verifyOtp: authApi.verifyOtp,
+        logout,
+        loading,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

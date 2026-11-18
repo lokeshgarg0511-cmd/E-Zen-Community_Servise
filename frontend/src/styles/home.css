@@ -1,0 +1,189 @@
+/* E-Zen Home Page Styles & Animations
+ * Uses Obsidian Black (#06030C), Royal Amethyst (#8E4585), Electric Cyan (#00E5FF)
+ * Respects prefers-reduced-motion and supports explicit pause controls.
+ */
+
+.ezen-hero-grid {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 75% 65% at 50% 35%, #000 35%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 35%, #000 35%, transparent 100%);
+}
+
+.ezen-glass {
+  background: linear-gradient(155deg, rgba(24, 16, 44, 0.78) 0%, rgba(10, 6, 20, 0.92) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 18px 44px -16px rgba(0, 0, 0, 0.85);
+}
+
+.ezen-glass-hover {
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.28s ease,
+    box-shadow 0.28s ease;
+}
+
+.ezen-glass-hover:hover {
+  border-color: rgba(0, 229, 255, 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 0 28px -6px rgba(0, 229, 255, 0.28),
+    0 0 18px -6px rgba(142, 69, 133, 0.35),
+    0 20px 44px -16px rgba(0, 0, 0, 0.9);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ezen-glass-hover:hover {
+    transform: translate3d(0, -4px, 0);
+  }
+}
+
+/* Keyframes for EdTech Illustration — compositor-friendly transforms & opacity */
+@keyframes ezenFloatSlow {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -10px, 0);
+  }
+}
+
+@keyframes ezenFloatMedium {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -7px, 0);
+  }
+}
+
+@keyframes ezenPulseRing {
+  0%, 100% {
+    transform: scale(0.96);
+    opacity: 0.45;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 0.85;
+  }
+}
+
+@keyframes ezenDataFlow {
+  0% {
+    stroke-dashoffset: 36;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes ezenAuraBreath {
+  0%, 100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ezen-anim-float-slow {
+    animation: ezenFloatSlow 6.5s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  .ezen-anim-float-med {
+    animation: ezenFloatMedium 5.2s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  .ezen-anim-float-delayed {
+    animation: ezenFloatSlow 7s ease-in-out -2.8s infinite;
+    will-change: transform;
+  }
+
+  .ezen-anim-pulse {
+    animation: ezenPulseRing 3.8s ease-in-out infinite;
+    transform-origin: center;
+  }
+
+  .ezen-anim-flow {
+    animation: ezenDataFlow 2.6s linear infinite;
+  }
+
+  .ezen-anim-aura {
+    animation: ezenAuraBreath 6s ease-in-out infinite;
+  }
+}
+
+/* User pause override (WCAG 2.2.2 Pause, Stop, Hide) */
+.ezen-motion-paused *,
+.ezen-motion-paused *::before,
+.ezen-motion-paused *::after {
+  animation-play-state: paused !important;
+}
+
+/* Native <dialog> modal & mobile drawer containment */
+dialog.ezen-dialog {
+  color: inherit;
+}
+
+dialog.ezen-dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog.ezen-dialog::backdrop {
+  background: rgba(4, 2, 10, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  dialog.ezen-dialog[open] {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    transition:
+      opacity 0.22s ease-out,
+      transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+      display 0.22s,
+      overlay 0.22s;
+    transition-behavior: allow-discrete;
+  }
+
+  @starting-style {
+    dialog.ezen-dialog[open] {
+      opacity: 0;
+      transform: translate3d(0, 10px, 0) scale(0.97);
+    }
+  }
+
+  dialog.ezen-drawer[open] {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    transition:
+      opacity 0.22s ease-out,
+      transform 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+      display 0.26s,
+      overlay 0.26s;
+    transition-behavior: allow-discrete;
+  }
+
+  @starting-style {
+    dialog.ezen-drawer[open] {
+      opacity: 0;
+      transform: translate3d(100%, 0, 0);
+    }
+  }
+}
+
+/* Scroll margin so anchor jumps clear the sticky header cleanly */
+section[id] {
+  scroll-margin-top: 5.5rem;
+}

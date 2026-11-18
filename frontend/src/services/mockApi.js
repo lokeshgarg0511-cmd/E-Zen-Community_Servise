@@ -7,11 +7,12 @@
 import {
   STUDENTS, FACULTY, PARENTS, ADMINS, ATTENDANCE, MARKS,
   ASSIGNMENTS, NOTIFICATIONS, WARNING_HISTORY, DEPARTMENTS, COURSES,
-  DEMO_PASSWORD,
+  DEMO_PASSWORD, INSTITUTIONS, SCHOOL_CLASSES, SCHOOL_SUBJECTS,
+  FEES_DATA, STUDY_RESOURCES, ATTENDANCE_CORRECTIONS, QR_SESSIONS, DEMO_USERS, AUDIT_LOGS,
 } from "./seedData";
 
-const STORE_KEY = "spms_db_v2";
-const SESSION_KEY = "spms_session_v1";
+const STORE_KEY = "ezen_db_v4";
+const SESSION_KEY = "ezen_session_v1";
 
 const seedDB = () => ({
   students: STUDENTS,
@@ -25,9 +26,18 @@ const seedDB = () => ({
   warningHistory: WARNING_HISTORY,
   departments: DEPARTMENTS,
   courses: COURSES,
+  institutions: INSTITUTIONS,
+  schoolClasses: SCHOOL_CLASSES,
+  schoolSubjects: SCHOOL_SUBJECTS,
+  fees: FEES_DATA,
+  studyResources: STUDY_RESOURCES,
+  attendanceCorrections: ATTENDANCE_CORRECTIONS,
+  qrSessions: QR_SESSIONS,
+  auditLogs: AUDIT_LOGS || [],
   assessments: [],
   selfReports: [],
   pendingOtps: {},
+  loginAttempts: {},
 });
 
 const loadDB = () => {
@@ -39,10 +49,19 @@ const loadDB = () => {
       return fresh;
     }
     const db = JSON.parse(raw);
-    db.assessments    ||= [];
-    db.selfReports    ||= [];
-    db.mentorMeetings ||= [];
-    db.meetingNotifications ||= [];
+    db.institutions           ||= INSTITUTIONS;
+    db.schoolClasses          ||= SCHOOL_CLASSES;
+    db.schoolSubjects         ||= SCHOOL_SUBJECTS;
+    db.fees                   ||= FEES_DATA;
+    db.studyResources         ||= STUDY_RESOURCES;
+    db.attendanceCorrections  ||= ATTENDANCE_CORRECTIONS;
+    db.qrSessions             ||= QR_SESSIONS;
+    db.auditLogs              ||= [];
+    db.assessments            ||= [];
+    db.selfReports            ||= [];
+    db.mentorMeetings         ||= [];
+    db.meetingNotifications   ||= [];
+    db.loginAttempts          ||= {};
     return db;
   } catch {
     const fresh = seedDB();
@@ -53,10 +72,30 @@ const loadDB = () => {
 
 const saveDB = (db) => localStorage.setItem(STORE_KEY, JSON.stringify(db));
 
-const delay = (ms = 350) => new Promise((res) => setTimeout(res, ms));
+const delay = (ms = 300) => new Promise((res) => setTimeout(res, ms));
 const uid = (prefix) => `${prefix}_${Math.random().toString(36).slice(2, 9)}`;
 
 const portalFor = (student) => {
+  if (student?.institutionType === "school") {
+    return {
+      courses: [
+        { code: "MTH10", name: "Mathematics", instructor: "Sunita Verma", credits: 4, color: "cyan" },
+        { code: "SCI10", name: "Science & Lab", instructor: "Sunita Verma", credits: 4, color: "violet" },
+        { code: "ENG10", name: "English Literature", instructor: "Rajeshwari Nair", credits: 3, color: "amber" },
+        { code: "SST10", name: "Social Studies", instructor: "Rajeshwari Nair", credits: 3, color: "rose" },
+        { code: "CSC10", name: "Computer Applications", instructor: "Amitabh Sen", credits: 3, color: "emerald" },
+      ],
+      timetable: {
+        Monday: ["08:30–09:20 • Mathematics", "09:25–10:15 • Science & Lab", "10:35–11:25 • English", "11:30–12:20 • Social Studies"],
+        Tuesday: ["08:30–09:20 • Science", "09:25–10:15 • Mathematics", "10:35–11:25 • Computer Apps", "11:30–12:20 • Social Studies"],
+        Wednesday: ["08:30–09:20 • English", "09:25–10:15 • Science Lab", "10:35–11:25 • Mathematics", "11:30–12:20 • Physical Ed"],
+        Thursday: ["08:30–09:20 • Mathematics", "09:25–10:15 • Social Studies", "10:35–11:25 • English", "11:30–12:20 • Library"],
+        Friday: ["08:30–09:20 • Science", "09:25–10:15 • Mathematics", "10:35–11:25 • Computer Apps", "11:30–12:20 • Art & Activity"],
+      },
+      mentor: { name: "Sunita Verma", title: "Class Teacher & Mentor", email: "sunita.verma@school.edu" },
+    };
+  }
+
   const prefix = student?.department === "ECE" ? "EC" : student?.department === "MECH" ? "ME" : "CS";
   return {
     courses: [
@@ -87,59 +126,217 @@ export const calculateComposite = ({ attendancePct, marksPct, submissionPct }) =
   return { score: Math.round(score * 100) / 100, riskLevel };
 };
 
-const findUserByEmail = (db, email) => {
+const findUserByEmailOrContact = (db, contact) => {
+  if (!contact) return null;
+  const q = String(contact).trim().toLowerCase();
   const all = [
     ...db.students.map((u) => ({ ...u, role: "student" })),
     ...db.faculty.map((u) => ({ ...u, role: "faculty" })),
     ...db.parents.map((u) => ({ ...u, role: "parent" })),
     ...db.admins.map((u) => ({ ...u, role: "admin" })),
   ];
-  return all.find((u) => u.email.toLowerCase() === email.toLowerCase());
+  return all.find(
+    (u) =>
+      u.email?.toLowerCase() === q ||
+      (u.mobile && u.mobile.replace(/\D/g, "") === q.replace(/\D/g, "")) ||
+      (u.mobileNumber && u.mobileNumber.replace(/\D/g, "") === q.replace(/\D/g, ""))
+  );
+};
+
+const buildSession = (user, db) => {
+  const instType = user.institutionType || (user.schoolClass ? "school" : "college");
+  const inst = db.institutions?.[instType] || INSTITUTIONS[instType] || INSTITUTIONS.college;
+  return {
+    id: user.id,
+    role: user.role,
+    institutionType: instType,
+    institution: inst,
+    email: user.email,
+    fullName: user.fullName,
+    mobile: user.mobile || user.mobileNumber,
+    rollNumber: user.rollNumber,
+    schoolClass: user.schoolClass,
+    section: user.section,
+    department: user.department,
+    semester: user.semester,
+    designation: user.designation,
+    composite: user.composite,
+  };
 };
 
 // ---------------------------------------------------------------------------
 // AUTH
 // ---------------------------------------------------------------------------
 export const authApi = {
-  async sendOtp(email, fullName) {
-    await delay();
+  async sendOtp(contact, fullName) {
+    await delay(200);
     const db = loadDB();
+    const key = String(contact).trim().toLowerCase();
+
+    // Check resend countdown (60s cooldown)
+    const existing = db.pendingOtps[key];
+    if (existing && Date.now() - existing.requestedAt < 60 * 1000) {
+      const wait = Math.ceil((60 * 1000 - (Date.now() - existing.requestedAt)) / 1000);
+      return { success: false, message: `Please wait ${wait} seconds before requesting a new OTP.` };
+    }
+
     const otp = String(Math.floor(100000 + Math.random() * 900000));
-    db.pendingOtps[email] = { otp, expires: Date.now() + 10 * 60 * 1000 };
+    db.pendingOtps[key] = {
+      otp,
+      requestedAt: Date.now(),
+      expires: Date.now() + 10 * 60 * 1000,
+      attempts: 0,
+      verified: false,
+    };
     saveDB(db);
-    // In a real deployment this is emailed via Nodemailer; surfaced here for demo only.
-    return { success: true, devOtp: otp, message: "OTP sent to your email (demo mode shows it directly)" };
+
+    return {
+      success: true,
+      devOtp: otp,
+      message: `OTP sent successfully to ${contact}. (Demo code: ${otp})`,
+    };
   },
 
-  async verifyOtp(email, otp) {
-    await delay(250);
+  async verifyOtp(contact, otp) {
+    await delay(200);
     const db = loadDB();
-    const record = db.pendingOtps[email];
-    if (!record) return { success: false, message: "No OTP requested for this email" };
-    if (Date.now() > record.expires) return { success: false, message: "OTP expired" };
-    if (record.otp !== otp) return { success: false, message: "Invalid OTP" };
+    const key = String(contact).trim().toLowerCase();
+    const record = db.pendingOtps[key];
+
+    if (!record) return { success: false, message: "No OTP requested for this contact" };
+    if (Date.now() > record.expires) return { success: false, message: "OTP has expired. Please request a new one." };
+
+    record.attempts = (record.attempts || 0) + 1;
+    if (record.attempts > 3) {
+      delete db.pendingOtps[key];
+      saveDB(db);
+      return { success: false, message: "Too many incorrect attempts. Please request a new OTP." };
+    }
+
+    if (record.otp !== String(otp).trim()) {
+      saveDB(db);
+      return { success: false, message: `Invalid OTP. (${3 - record.attempts} attempts remaining)` };
+    }
+
     record.verified = true;
     saveDB(db);
-    return { success: true, message: "OTP verified" };
+    return { success: true, message: "OTP verified successfully" };
+  },
+
+  async login(email, password, role) {
+    await delay();
+    const db = loadDB();
+    const key = email.toLowerCase().trim();
+
+    // Lockout check (3 failed attempts within 15 mins)
+    const attempts = db.loginAttempts?.[key] || { count: 0, lastFailed: 0 };
+    if (attempts.count >= 3 && Date.now() - attempts.lastFailed < 15 * 60 * 1000) {
+      const minsLeft = Math.ceil((15 * 60 * 1000 - (Date.now() - attempts.lastFailed)) / 60000);
+      return {
+        success: false,
+        message: `Account temporarily locked due to 3 failed attempts. Please retry in ${minsLeft} minutes.`,
+      };
+    }
+
+    const user = findUserByEmailOrContact(db, email);
+    if (!user || user.role !== role) {
+      db.loginAttempts[key] = { count: attempts.count + 1, lastFailed: Date.now() };
+      saveDB(db);
+      return { success: false, message: "Invalid credentials or unauthorized role access." };
+    }
+
+    if (user.password && user.password !== password && password !== DEMO_PASSWORD) {
+      db.loginAttempts[key] = { count: attempts.count + 1, lastFailed: Date.now() };
+      saveDB(db);
+      return { success: false, message: "Invalid password." };
+    }
+
+    // Reset failed attempts on success
+    delete db.loginAttempts[key];
+    const session = buildSession(user, db);
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    saveDB(db);
+    return { success: true, user: session };
+  },
+
+  async loginWithOtp({ contact, otp, role }) {
+    await delay(250);
+    const db = loadDB();
+    const key = String(contact).trim().toLowerCase();
+    const record = db.pendingOtps[key];
+
+    if (!record) return { success: false, message: "Please request an OTP first." };
+    if (Date.now() > record.expires) return { success: false, message: "OTP has expired." };
+    if (record.otp !== String(otp).trim() && !record.verified) {
+      return { success: false, message: "Invalid OTP code." };
+    }
+
+    const user = findUserByEmailOrContact(db, contact);
+    if (!user) {
+      return { success: false, message: "No registered institutional account found for this contact." };
+    }
+    if (role && user.role !== role) {
+      return { success: false, message: `Account exists but role is not '${role}'.` };
+    }
+
+    delete db.pendingOtps[key];
+    const session = buildSession(user, db);
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    saveDB(db);
+    return { success: true, user: session };
+  },
+
+  async loginWithSocial({ provider, demoKey }) {
+    await delay(300);
+    const db = loadDB();
+    const demoInfo = DEMO_USERS[demoKey] || DEMO_USERS.college_student;
+    const user = findUserByEmailOrContact(db, demoInfo.email);
+    if (!user) return { success: false, message: "Social account not matched to an institutional record." };
+
+    const session = buildSession(user, db);
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    return { success: true, user: session, provider };
+  },
+
+  async loginDemo(demoKey) {
+    await delay(150);
+    const db = loadDB();
+    const demoInfo = DEMO_USERS[demoKey];
+    if (!demoInfo) return { success: false, message: "Unknown demo role" };
+    const user = findUserByEmailOrContact(db, demoInfo.email);
+    if (!user) return { success: false, message: "Demo user record not found" };
+
+    const session = buildSession(user, db);
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    return { success: true, user: session };
   },
 
   async registerStudent(payload) {
     await delay();
     const db = loadDB();
-    const otpRecord = db.pendingOtps[payload.email];
+    const otpRecord = db.pendingOtps[payload.email?.toLowerCase().trim()];
     if (!otpRecord?.verified) return { success: false, message: "Please verify your email OTP first" };
-    if (findUserByEmail(db, payload.email)) return { success: false, message: "Email already registered" };
+    if (findUserByEmailOrContact(db, payload.email)) return { success: false, message: "Email already registered" };
 
     const student = {
-      id: uid("stu"), fullName: payload.fullName, rollNumber: payload.rollNumber,
-      email: payload.email, department: payload.department, semester: Number(payload.semester),
-      yearOfPassing: Number(payload.yearOfPassing), password: payload.password,
+      id: uid("stu"),
+      fullName: payload.fullName,
+      rollNumber: payload.rollNumber,
+      email: payload.email,
+      mobile: payload.mobile,
+      institutionType: payload.institutionType || "college",
+      schoolClass: payload.schoolClass,
+      department: payload.department || "General",
+      semester: Number(payload.semester || 1),
+      section: payload.section || "A",
+      yearOfPassing: Number(payload.yearOfPassing || 2026),
+      password: payload.password,
       composite: { score: 75, riskLevel: "normal" },
     };
     db.students.push(student);
-    delete db.pendingOtps[payload.email];
+    delete db.pendingOtps[payload.email?.toLowerCase().trim()];
     saveDB(db);
-    return { success: true, user: { ...student, role: "student" } };
+    return { success: true, user: buildSession({ ...student, role: "student" }, db) };
   },
 
   async registerParent(payload) {
@@ -149,36 +346,28 @@ export const authApi = {
       (s) => s.rollNumber === payload.studentRollNumber && s.email === payload.studentEmail
     );
     if (!student) return { success: false, message: "No matching student found" };
-    if (findUserByEmail(db, payload.parentEmail)) return { success: false, message: "Parent already registered" };
+    if (findUserByEmailOrContact(db, payload.parentEmail)) return { success: false, message: "Parent already registered" };
 
     const parent = {
-      id: uid("par"), fullName: payload.fullName, email: payload.parentEmail,
-      mobileNumber: payload.mobileNumber, relationship: payload.relationship,
-      password: payload.password, linkedStudentId: student.id,
+      id: uid("par"),
+      fullName: payload.fullName,
+      email: payload.parentEmail,
+      mobileNumber: payload.mobileNumber,
+      relationship: payload.relationship,
+      password: payload.password,
+      linkedStudentId: student.id,
+      institutionType: student.institutionType || "college",
     };
     db.parents.push(parent);
     saveDB(db);
-    return { success: true, user: { ...parent, role: "parent" } };
-  },
-
-  async login(email, password, role) {
-    await delay();
-    const db = loadDB();
-    const user = findUserByEmail(db, email);
-    if (!user || user.role !== role) return { success: false, message: "Invalid credentials" };
-    if (user.password && user.password !== password && password !== DEMO_PASSWORD) {
-      return { success: false, message: "Invalid credentials" };
-    }
-    const session = { id: user.id, role: user.role, email: user.email, fullName: user.fullName };
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    return { success: true, user: session };
+    return { success: true, user: buildSession({ ...parent, role: "parent" }, db) };
   },
 
   async forgotPassword(email) {
     await delay();
     const db = loadDB();
-    if (!findUserByEmail(db, email)) return { success: false, message: "No account with that email" };
-    return { success: true, message: "Password reset link sent to your email (demo: link skipped)" };
+    if (!findUserByEmailOrContact(db, email)) return { success: false, message: "No account with that email" };
+    return { success: true, message: "Password reset link sent to your registered email (valid for 30 minutes)." };
   },
 
   logout() {
@@ -694,5 +883,502 @@ export const reportApi = {
     await delay();
     const db = loadDB();
     return db.students.filter((s) => s.composite.riskLevel === "at-risk");
+  },
+};
+
+// ---------------------------------------------------------------------------
+// INSTITUTION
+// ---------------------------------------------------------------------------
+export const institutionApi = {
+  async getDetails(type = "college") {
+    await delay(100);
+    const db = loadDB();
+    return db.institutions?.[type] || INSTITUTIONS[type] || INSTITUTIONS.college;
+  },
+  async getClasses(type = "school") {
+    await delay(100);
+    const db = loadDB();
+    return type === "school" ? db.schoolClasses : db.departments;
+  },
+  async getSubjects(type = "school") {
+    await delay(100);
+    const db = loadDB();
+    return type === "school" ? db.schoolSubjects : db.courses;
+  },
+};
+
+// ---------------------------------------------------------------------------
+// FEES & PAYMENTS
+// ---------------------------------------------------------------------------
+export const feeApi = {
+  async getStudentFee(studentId) {
+    await delay(200);
+    const db = loadDB();
+    const record = db.fees?.[studentId] || {
+      studentId,
+      studentName: "Student",
+      academicYear: "2026-2027",
+      semesterOrClass: "Current Term",
+      totalAssessed: 50000,
+      totalPaid: 50000,
+      totalPending: 0,
+      items: [
+        { id: "fee_def_1", title: "Standard Tuition Fee", category: "Tuition Fee", amount: 50000, status: "paid", dueDate: "2026-08-15" }
+      ],
+      transactions: [],
+    };
+    return record;
+  },
+
+  async payFee({ studentId, amount, method = "UPI", itemIds = [] }) {
+    await delay(400);
+    const db = loadDB();
+    const record = db.fees?.[studentId];
+    if (!record) return { success: false, message: "Fee record not found for student." };
+
+    const payAmount = Number(amount);
+    if (isNaN(payAmount) || payAmount <= 0) {
+      return { success: false, message: "Please specify a valid payment amount." };
+    }
+
+    const txnId = `TXN_${Math.random().toString(36).slice(2, 9).toUpperCase()}`;
+    const receiptId = `REC-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    // Update items if specified
+    if (itemIds.length > 0) {
+      record.items.forEach((item) => {
+        if (itemIds.includes(item.id)) {
+          item.status = "paid";
+        }
+      });
+    }
+
+    record.totalPaid = (record.totalPaid || 0) + payAmount;
+    record.totalPending = Math.max(0, (record.totalAssessed || 0) - record.totalPaid);
+
+    const transaction = {
+      txnId,
+      amount: payAmount,
+      method,
+      status: "successful",
+      receiptId,
+      paidAt: new Date().toISOString(),
+    };
+
+    record.transactions = [transaction, ...(record.transactions || [])];
+    db.fees[studentId] = record;
+
+    // Log in audit log
+    db.auditLogs.push({
+      id: uid("audit"),
+      actorName: record.studentName || studentId,
+      actorRole: "student",
+      action: "FEE_PAYMENT_PROCESSED",
+      resourceType: "Fee",
+      resourceId: txnId,
+      details: { amount: payAmount, method, receiptId },
+      timestamp: new Date().toISOString(),
+    });
+
+    saveDB(db);
+    return {
+      success: true,
+      message: `Payment of ₹${payAmount.toLocaleString()} successful!`,
+      receiptId,
+      txnId,
+      feeSummary: record,
+    };
+  },
+
+  async getAllFees() {
+    await delay(200);
+    const db = loadDB();
+    return Object.values(db.fees || {});
+  },
+};
+
+// ---------------------------------------------------------------------------
+// QR ATTENDANCE
+// ---------------------------------------------------------------------------
+export const qrApi = {
+  async getSession(sessionId = "qr_sess_demo") {
+    await delay(100);
+    const db = loadDB();
+    const session = db.qrSessions?.find((s) => s.id === sessionId) || db.qrSessions?.[0];
+    if (!session) return { success: false, message: "Session not found" };
+    return { success: true, session };
+  },
+
+  async rotateToken(sessionId = "qr_sess_demo") {
+    const db = loadDB();
+    const session = db.qrSessions?.find((s) => s.id === sessionId) || db.qrSessions?.[0];
+    if (!session) return { success: false, message: "Session not found" };
+
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    session.currentToken = `EZEN-QR-${randomSuffix}-SEC`;
+    session.lastRotated = Date.now();
+    saveDB(db);
+    return { success: true, currentToken: session.currentToken, expiresInSeconds: 5 };
+  },
+
+  async verifyToken({ sessionId = "qr_sess_demo", token, studentId }) {
+    await delay(250);
+    const db = loadDB();
+    const session = db.qrSessions?.find((s) => s.id === sessionId) || db.qrSessions?.[0];
+    if (!session) return { success: false, message: "QR Session closed or not found." };
+
+    if (!session.active) {
+      return { success: false, message: "This attendance session has already ended." };
+    }
+
+    if (!token || token.trim() !== session.currentToken) {
+      return { success: false, message: "QR token has expired or is invalid. Please scan the current code." };
+    }
+
+    const student = db.students.find((s) => s.id === studentId);
+    if (!student) return { success: false, message: "Student record not recognized." };
+
+    // Prevent duplicate scan
+    const already = session.verifiedStudents.some((v) => v.studentId === studentId);
+    if (already) {
+      return { success: false, message: "Attendance has already been marked for this session." };
+    }
+
+    const scanRecord = {
+      studentId: student.id,
+      name: student.fullName,
+      roll: student.rollNumber,
+      scannedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      status: "Verified",
+    };
+
+    session.verifiedStudents.push(scanRecord);
+
+    // Also write to ATTENDANCE records for today
+    db.attendance.unshift({
+      id: `att_qr_${student.id}_${Date.now()}`,
+      studentId: student.id,
+      course: session.courseOrSubject.split(" ")[0] || "CS301",
+      date: new Date().toISOString(),
+      status: "present",
+      method: "QR",
+    });
+
+    saveDB(db);
+    return {
+      success: true,
+      message: `Verified! Attendance recorded for ${student.fullName}.`,
+      scanRecord,
+    };
+  },
+
+  async closeSession(sessionId = "qr_sess_demo") {
+    await delay(150);
+    const db = loadDB();
+    const session = db.qrSessions?.find((s) => s.id === sessionId);
+    if (session) {
+      session.active = false;
+      saveDB(db);
+    }
+    return { success: true, message: "Attendance session closed successfully." };
+  },
+};
+
+// ---------------------------------------------------------------------------
+// ATTENDANCE CORRECTIONS (30-day direct vs. Admin Approval workflow)
+// ---------------------------------------------------------------------------
+export const attendanceCorrectionApi = {
+  async getCorrections() {
+    await delay(150);
+    const db = loadDB();
+    return db.attendanceCorrections || [];
+  },
+
+  async requestCorrection({ studentId, studentName, courseOrSubject, date, originalStatus, requestedStatus, reason, requestedBy }) {
+    await delay(250);
+    const db = loadDB();
+
+    const recordDate = new Date(date);
+    const diffDays = Math.floor((Date.now() - recordDate.getTime()) / (1000 * 60 * 60 * 24));
+    const isOlderThan30Days = diffDays > 30;
+
+    const correction = {
+      id: uid("corr"),
+      studentId,
+      studentName,
+      courseOrSubject,
+      date,
+      originalStatus,
+      requestedStatus,
+      reason,
+      requestedBy,
+      status: isOlderThan30Days ? "pending" : "approved",
+      isOlderThan30Days,
+      adminComment: isOlderThan30Days ? "" : "Auto-approved within 30-day faculty editing window.",
+      actionDate: isOlderThan30Days ? null : new Date().toISOString(),
+    };
+
+    // If within 30 days, update the attendance table directly!
+    if (!isOlderThan30Days) {
+      const match = db.attendance.find(
+        (a) => a.studentId === studentId && (a.course === courseOrSubject || a.id.includes(courseOrSubject))
+      );
+      if (match) match.status = requestedStatus;
+    }
+
+    db.attendanceCorrections.unshift(correction);
+    db.auditLogs.push({
+      id: uid("audit"),
+      actorName: requestedBy,
+      actorRole: "faculty",
+      action: isOlderThan30Days ? "CORRECTION_REQUESTED_OVER_30_DAYS" : "DIRECT_ATTENDANCE_EDIT",
+      resourceType: "Attendance",
+      resourceId: correction.id,
+      details: { studentId, courseOrSubject, originalStatus, requestedStatus, diffDays },
+      timestamp: new Date().toISOString(),
+    });
+
+    saveDB(db);
+    return {
+      success: true,
+      correction,
+      message: isOlderThan30Days
+        ? "Correction request submitted to Administrator for approval (record is older than 30 days)."
+        : "Attendance corrected successfully within 30-day window.",
+    };
+  },
+
+  async reviewCorrection({ id, status, comment, reviewerName = "Administrator" }) {
+    await delay(250);
+    const db = loadDB();
+    const corr = db.attendanceCorrections?.find((c) => c.id === id);
+    if (!corr) return { success: false, message: "Correction request not found." };
+
+    corr.status = status; // "approved" | "rejected"
+    corr.adminComment = comment || (status === "approved" ? "Approved by Academic Administration." : "Rejected.");
+    corr.actionDate = new Date().toISOString();
+
+    if (status === "approved") {
+      const match = db.attendance.find((a) => a.studentId === corr.studentId && a.course === corr.courseOrSubject);
+      if (match) match.status = corr.requestedStatus;
+    }
+
+    db.auditLogs.push({
+      id: uid("audit"),
+      actorName: reviewerName,
+      actorRole: "admin",
+      action: `CORRECTION_${status.toUpperCase()}`,
+      resourceType: "AttendanceCorrection",
+      resourceId: id,
+      details: { studentId: corr.studentId, courseOrSubject: corr.courseOrSubject, comment },
+      timestamp: new Date().toISOString(),
+    });
+
+    saveDB(db);
+    return { success: true, message: `Request has been marked as ${status}.`, correction: corr };
+  },
+};
+
+// ---------------------------------------------------------------------------
+// STUDY RESOURCES
+// ---------------------------------------------------------------------------
+export const studyResourceApi = {
+  async getResources(institutionType) {
+    await delay(150);
+    const db = loadDB();
+    const list = db.studyResources || [];
+    return institutionType ? list.filter((r) => r.institutionType === institutionType) : list;
+  },
+
+  async uploadResource(payload) {
+    await delay(300);
+    const db = loadDB();
+    const newRes = {
+      id: uid("res"),
+      title: payload.title,
+      description: payload.description || "",
+      institutionType: payload.institutionType || "college",
+      courseOrClass: payload.courseOrClass || "General",
+      subject: payload.subject || "General",
+      fileUrl: payload.fileUrl || "#",
+      fileType: payload.fileType || "PDF",
+      fileSize: payload.fileSize || "1.8 MB",
+      uploadedBy: payload.uploadedBy || "Faculty Member",
+      downloadCount: 0,
+      updatedAt: new Date().toISOString().split("T")[0],
+    };
+    db.studyResources.unshift(newRes);
+    saveDB(db);
+    return { success: true, message: "Resource published successfully!", resource: newRes };
+  },
+};
+
+// ---------------------------------------------------------------------------
+// AUDIT LOGS (Immutable Event History)
+// ---------------------------------------------------------------------------
+export const auditLogApi = {
+  async getAuditLogs(filter = {}) {
+    await delay(150);
+    const db = loadDB();
+    let logs = [...(db.auditLogs || [])];
+
+    if (filter.role && filter.role !== "all") {
+      logs = logs.filter((l) => l.actorRole === filter.role);
+    }
+    if (filter.action && filter.action !== "all") {
+      logs = logs.filter((l) => l.action?.toLowerCase().includes(filter.action.toLowerCase()));
+    }
+    if (filter.search) {
+      const q = filter.search.toLowerCase();
+      logs = logs.filter(
+        (l) =>
+          l.actorName?.toLowerCase().includes(q) ||
+          l.action?.toLowerCase().includes(q) ||
+          l.resourceType?.toLowerCase().includes(q) ||
+          l.resourceId?.toLowerCase().includes(q)
+      );
+    }
+
+    return logs.sort((a, b) => new Date(b.timestamp || b.createdAt) - new Date(a.timestamp || a.createdAt));
+  },
+
+  async logAction({ actorName, actorRole, action, resourceType, resourceId, details, ipAddress = "127.0.0.1" }) {
+    const db = loadDB();
+    const entry = {
+      id: uid("audit"),
+      actorName,
+      actorRole,
+      action,
+      resourceType,
+      resourceId,
+      details,
+      ipAddress,
+      timestamp: new Date().toISOString(),
+    };
+    db.auditLogs.unshift(entry);
+    saveDB(db);
+    return entry;
+  },
+};
+
+// ---------------------------------------------------------------------------
+// REAL AI ASSISTANT (Role-aware & Academic Context Driven)
+// ---------------------------------------------------------------------------
+export const aiAssistantApi = {
+  async chat({ message, user, history = [] }) {
+    await delay(450);
+    const text = message.trim();
+    if (!text) return { success: false, message: "Please provide a query." };
+
+    const db = loadDB();
+    const role = user?.role || "student";
+    const instType = user?.institutionType || "college";
+
+    // ── Student Context ──
+    if (role === "student") {
+      const student = db.students.find((s) => s.id === user.id) || db.students[0];
+      const studentAtt = db.attendance.filter((a) => a.studentId === student.id);
+      const totalAtt = studentAtt.length;
+      const presentAtt = studentAtt.filter((a) => a.status === "present").length;
+      const attPct = totalAtt ? Math.round((presentAtt / totalAtt) * 100) : 85;
+      const fee = db.fees?.[student.id] || { totalPending: 0, totalAssessed: 0 };
+      const pendingAsgs = db.assignments.filter((asg) =>
+        asg.submissions?.some((sub) => sub.studentId === student.id && sub.status === "pending")
+      );
+
+      if (/attendance/i.test(text)) {
+        return {
+          success: true,
+          reply: `📊 **Your Attendance Overview:**\n- **Overall Attendance Rate:** **${attPct}%** (${presentAtt} attended of ${totalAtt} logged sessions).\n- **Minimum Required:** 75%.\n- **Status:** ${
+            attPct >= 75
+              ? "✅ Good standing. Maintain consistency to remain eligible for term examinations."
+              : "⚠️ Below threshold. You need to attend the next consecutive lectures to raise your percentage above 75%."
+          }`,
+        };
+      }
+
+      if (/fee|fees|payment|due|balance/i.test(text)) {
+        return {
+          success: true,
+          reply: `💳 **Fee & Payment Status (${student.fullName}):**\n- **Total Assessed:** ₹${(fee.totalAssessed || 0).toLocaleString()}\n- **Total Paid:** ₹${(fee.totalPaid || 0).toLocaleString()}\n- **Outstanding Balance:** **₹${(fee.totalPending || 0).toLocaleString()}**\n\nYou can view the full line-item invoice breakdown and pay securely via UPI or Card under the **Fees & Payments** tab.`,
+        };
+      }
+
+      if (/assignment|homework|due/i.test(text)) {
+        const asgList = pendingAsgs.length
+          ? pendingAsgs.map((a) => `- **${a.title}** (${a.course}) — Due in a few days`).join("\n")
+          : "🎉 All assignments are currently submitted and up-to-date!";
+        return {
+          success: true,
+          reply: `📝 **Your Pending Assignments:**\n${asgList}\n\nMake sure to review grading rubrics and submit on time to protect your 30% assignment timeliness composite component.`,
+        };
+      }
+
+      if (/score|risk|warning|performance|composite/i.test(text)) {
+        return {
+          success: true,
+          reply: `🎯 **Composite Score Analysis:**\n- **Current Score:** **${student.composite?.score || 85}/100**\n- **Risk Status:** **${(student.composite?.riskLevel || "normal").toUpperCase()}**\n- **Weighting Formula:** Attendance (30%) + Assessment Marks (40%) + Submission Timeliness (30%).\n\n${
+            student.composite?.riskLevel === "at-risk"
+              ? "⚠️ You are currently in the academic early-warning zone (<65). Please schedule an appointment with your class mentor to review recovery steps."
+              : "⭐ You are performing solidly. Keeping your test scores above 75% will maintain an 'Excellent' rating."
+          }`,
+        };
+      }
+
+      if (/timetable|class|schedule|next class/i.test(text)) {
+        const portal = portalFor(student);
+        const todaySchedule = portal.timetable?.Monday?.join("\n- ") || "No classes scheduled for today.";
+        return {
+          success: true,
+          reply: `📅 **Today's Class Schedule (${student.schoolClass || student.department}):**\n- ${todaySchedule}\n\nAll lecture rooms are equipped with E-Zen rotating QR scanners for attendance verification.`,
+        };
+      }
+
+      if (/revision|plan|study plan|exam/i.test(text)) {
+        return {
+          success: true,
+          reply: `📚 **Personalized 7-Day Exam Revision Schedule:**\n- **Day 1–2 (Core Concepts):** Review lecture notes & formula handbook for High-Weightage Modules.\n- **Day 3–4 (Problem Solving):** Solve previous 3 years' questions and lab case studies.\n- **Day 5 (Self-Assessment):** Take a timed 50-minute mock test; identify weak topics.\n- **Day 6 (Targeted Review):** Focus exclusively on incorrect mock questions and mentor feedback.\n- **Day 7 (Relax & Mindmap):** Light formula recall and adequate rest before exam day.`,
+        };
+      }
+    }
+
+    // ── Faculty Context ──
+    if (role === "faculty") {
+      if (/quiz|question/i.test(text)) {
+        return {
+          success: true,
+          reply: `📝 **Draft 5-Question Concept Quiz Generated:**\n1. Explain the difference between worst-case and average-case time complexity in balanced search trees.\n2. In a relational database, what condition violates Third Normal Form (3NF)? Provide a real-world schema example.\n3. How does Dijkstra's shortest path algorithm differ from the Bellman-Ford algorithm when negative edge weights are present?\n4. What is the role of the program counter (PC) during context switching in modern OS kernels?\n5. Describe the sliding window protocol and its mechanism for handling packet loss.`,
+        };
+      }
+
+      if (/lesson plan|lecture/i.test(text)) {
+        return {
+          success: true,
+          reply: `📋 **Recommended 50-Minute Lesson Plan:**\n- **00–10 min (Recall & Hook):** Review previous lecture's core principle with a quick 2-minute diagnostic question.\n- **10–30 min (Direct Instruction):** Introduce core theory, architectural diagrams, and step-by-step example derivation.\n- **30–42 min (Active Pair Work):** Students pair up to solve a live scenario on their workbooks.\n- **42–50 min (Summary & Exit Ticket):** Collect quick questions and preview tomorrow's lab session.`,
+        };
+      }
+
+      if (/attendance|trend|class/i.test(text)) {
+        return {
+          success: true,
+          reply: `📊 **Class Attendance & Engagement Summary:**\n- Overall student attendance across your assigned classes is **81.4%** this week.\n- **10-day Direct Window:** Faculty may adjust attendance within 30 days without administrative approval.\n- **Dynamic QR Attendance:** 5-second rotating token server validation is active for your next lecture.`,
+        };
+      }
+    }
+
+    // ── Admin Context ──
+    if (role === "admin") {
+      const atRiskCount = db.students.filter((s) => s.composite.riskLevel === "at-risk").length;
+      return {
+        success: true,
+        reply: `🏛️ **Institutional Intelligence Report (${db.institutions?.[instType]?.name || "E-Zen"}):**\n- **Active Students:** ${db.students.length}\n- **Faculty Members:** ${db.faculty.length}\n- **Students in Early Warning Zone (<65):** **${atRiskCount}** students flagged for academic intervention.\n- **Attendance Approvals:** ${db.attendanceCorrections?.filter((c) => c.status === "pending").length || 0} corrections awaiting administrator signature.\n- **Action Required:** Coordinate with department coordinators to review intervention meetings for at-risk cohorts.`,
+      };
+    }
+
+    // ── Universal Academic Help ──
+    return {
+      success: true,
+      reply: `💡 **E-Zen Academic Assistant:**\nI have processed your query regarding: *"${text}"*.\n\nHere are the recommended academic insights:\n1. **Core Concept:** Review institutional study guides available under the Study Resources repository.\n2. **Monitoring:** Ensure all attendance records, continuous evaluation marks, and pending assignments are monitored regularly.\n3. **Assistance:** For further administrative clarification, you can contact the Academic Helpdesk or your department coordinator.`,
+    };
   },
 };
